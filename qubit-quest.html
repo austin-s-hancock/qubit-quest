@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qubit Quest</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+:root {
+  --bg:#040a12; --bg2:#071320; --bg3:#0a1c2e;
+  --accent:#00e5ff; --accent2:#7c3aed; --gold:#f59e0b;
+  --success:#10b981; --danger:#ef4444; --text:#e2f4ff; --muted:#5b8a9e;
+  --border:rgba(0,229,255,0.15); --glow:0 0 20px rgba(0,229,255,0.3);
+  --type-apply:#00e5ff; --type-predict:#a78bfa; --type-deconstruct:#f59e0b;
+  --type-evaluate:#f87171; --type-sandbox:#9ca3af;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh;overflow-x:hidden;}
+.screen{display:none;position:relative;z-index:1;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(124,58,237,0.06) 0%,transparent 60%),
+  radial-gradient(ellipse at 80% 20%,rgba(0,229,255,0.04) 0%,transparent 50%),var(--bg);}
+
+/* TITLE */
+#screen-title{align-items:center;justify-content:center;padding:2rem;}
+.title-wrap{text-align:center;max-width:680px;animation:fadeUp 1s ease both;}
+.title-eyebrow{font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.3em;color:var(--accent);text-transform:uppercase;margin-bottom:1rem;}
+.title-main{font-family:'Orbitron',sans-serif;font-size:clamp(2.8rem,8vw,5.5rem);font-weight:900;line-height:1;
+  background:linear-gradient(135deg,var(--accent) 0%,#fff 50%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.5rem;}
+.title-sub{font-family:'Orbitron',sans-serif;font-size:clamp(0.7rem,2vw,1rem);font-weight:400;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:2.5rem;}
+.story-box{background:rgba(0,229,255,0.03);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;padding:1.5rem 2rem;text-align:left;margin-bottom:2.5rem;font-size:0.95rem;line-height:1.8;color:#a8ccd8;}
+.story-box .callsign{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:0.75rem;letter-spacing:0.2em;display:block;margin-bottom:0.75rem;}
+.story-box strong{color:var(--text);font-weight:600;}
+.btn-primary{font-family:'Orbitron',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:1rem 3rem;background:transparent;border:1.5px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;position:relative;overflow:hidden;transition:color 0.2s,box-shadow 0.2s;}
+.btn-primary::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-102%);transition:transform 0.25s ease;z-index:-1;}
+.btn-primary:hover{color:var(--bg);box-shadow:var(--glow);}
+.btn-primary:hover::before{transform:translateX(0);}
+
+/* GAME SCREEN */
+#screen-game{flex-direction:row;padding:0;}
+.panel-left{width:300px;min-width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.25rem;gap:1rem;overflow-y:auto;}
+.level-header{border-bottom:1px solid var(--border);padding-bottom:0.85rem;}
+.level-tag{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;color:var(--accent);text-transform:uppercase;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;}
+.level-tag::before{content:'';display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse-dot 1.5s ease-in-out infinite;}
+.level-title{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:0.4rem;}
+.type-badge{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.12em;padding:0.15rem 0.5rem;border-radius:2px;text-transform:uppercase;}
+.type-badge.apply{background:rgba(0,229,255,0.12);color:var(--type-apply);border:1px solid rgba(0,229,255,0.3);}
+.type-badge.predict{background:rgba(167,139,250,0.12);color:var(--type-predict);border:1px solid rgba(167,139,250,0.3);}
+.type-badge.deconstruct{background:rgba(245,158,11,0.12);color:var(--type-deconstruct);border:1px solid rgba(245,158,11,0.3);}
+.type-badge.evaluate{background:rgba(248,113,113,0.12);color:var(--type-evaluate);border:1px solid rgba(248,113,113,0.3);}
+.type-badge.sandbox{background:rgba(156,163,175,0.12);color:var(--type-sandbox);border:1px solid rgba(156,163,175,0.3);}
+.reading-zone{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:4px;padding:0.85rem;}
+.zone-label{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;margin-bottom:0.4rem;}
+.mission-text{font-size:0.82rem;line-height:1.6;color:#9bbfce;margin-bottom:0.65rem;}
+.state-row{display:flex;align-items:center;justify-content:space-between;margin-top:0.25rem;}
+.state-label{font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;color:var(--muted);}
+.state-value{font-family:'Share Tech Mono',monospace;font-size:0.95rem;font-weight:bold;}
+.state-value.current{color:var(--accent);text-shadow:var(--glow);}
+.state-value.target{color:var(--gold);text-shadow:0 0 12px rgba(245,158,11,0.4);}
+.zone-divider{border:none;border-top:1px dashed rgba(0,229,255,0.12);margin:0;}
+.section-label{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;color:var(--muted);text-transform:uppercase;margin-bottom:0.6rem;}
+.gates-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;}
+.gate-btn{font-family:'Orbitron',sans-serif;font-size:0.8rem;font-weight:700;padding:0.55rem 0.4rem;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.2);color:var(--accent);border-radius:4px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.gate-btn:hover:not(:disabled){background:rgba(0,229,255,0.15);border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,0.2);transform:translateY(-1px);}
+.gate-btn:disabled{opacity:0.25;cursor:not-allowed;}
+.sequence-display{min-height:34px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;padding:0.45rem 0.65rem;display:flex;align-items:center;flex-wrap:wrap;gap:0.3rem;}
+.seq-chip{font-family:'Orbitron',monospace;font-size:0.62rem;font-weight:700;padding:0.18rem 0.45rem;background:rgba(124,58,237,0.25);border:1px solid rgba(124,58,237,0.5);color:#c4b5fd;border-radius:3px;animation:chipIn 0.15s ease both;}
+.seq-chip.readonly{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--accent);}
+.seq-arrow{font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:var(--muted);}
+.seq-empty{font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:var(--muted);}
+.action-row{display:flex;gap:0.4rem;}
+.btn-sm{flex:1;font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:0.08em;padding:0.5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;transition:all 0.15s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:var(--danger);color:var(--danger);}
+.btn-sm.primary{border-color:var(--accent);color:var(--accent);}
+.btn-sm.primary:hover{background:rgba(0,229,255,0.1);}
+.predict-panel{background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.2);border-radius:4px;padding:0.75rem;}
+.predict-instruction{font-size:0.78rem;color:#c4b5fd;line-height:1.5;margin-bottom:0.6rem;}
+.predict-result{font-family:'Share Tech Mono',monospace;font-size:0.88rem;color:var(--accent);margin-bottom:0.6rem;min-height:1.4em;}
+.predict-actions{display:flex;gap:0.4rem;}
+.evaluate-panel{display:flex;flex-direction:column;gap:0.75rem;}
+.seq-compare{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
+.seq-block{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;padding:0.5rem;}
+.seq-block-label{font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:var(--muted);letter-spacing:0.1em;margin-bottom:0.35rem;}
+.seq-block-chips{display:flex;flex-wrap:wrap;gap:0.25rem;align-items:center;}
+.eval-question{font-size:0.8rem;color:#9bbfce;line-height:1.5;margin-bottom:0.35rem;}
+.eval-options{display:flex;flex-direction:column;gap:0.3rem;}
+.eval-option{display:flex;align-items:flex-start;gap:0.4rem;cursor:pointer;}
+.eval-option input[type=radio]{accent-color:var(--accent);margin-top:0.15rem;flex-shrink:0;}
+.eval-option span{font-size:0.76rem;color:#9bbfce;line-height:1.4;}
+.concept-box{background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);border-radius:4px;padding:0.75rem 0.85rem;font-size:0.8rem;line-height:1.6;color:#c4b5fd;}
+.concept-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.concept-title{font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.15em;color:#a78bfa;text-transform:uppercase;}
+.concept-chevron{font-size:0.62rem;color:var(--muted);transition:transform 0.2s;display:inline-block;}
+.concept-chevron.open{transform:rotate(180deg);}
+.concept-body{display:none;margin-top:0.5rem;}
+.concept-body p{margin-bottom:0.65rem;}
+.concept-body p:last-child{margin-bottom:0;}
+.concept-body .katex{font-size:0.95em;}
+
+/* RIGHT PANEL */
+.panel-right{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;position:relative;}
+.hud-bar{position:absolute;top:1.25rem;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:2rem;z-index:10;}
+.hud-item{font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;color:var(--muted);text-align:center;}
+.hud-item span{display:block;font-size:1rem;font-weight:bold;color:var(--text);margin-top:2px;}
+.hud-map-btn{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;padding:0.28rem 0.6rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;transition:all 0.15s;text-transform:uppercase;}
+.hud-map-btn:hover{border-color:var(--accent);color:var(--accent);}
+.world-banner{text-align:center;padding:0.4rem 1rem;font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:0.2em;border-bottom:1px solid var(--border);color:var(--muted);}
+.world-banner span{color:var(--accent);}
+.sphere-wrap{position:relative;width:100%;max-width:520px;align-self:center;}
+#sphere-canvas{border-radius:8px;border:1px solid var(--border);background:radial-gradient(ellipse at center,rgba(0,229,255,0.04) 0%,transparent 70%);box-shadow:0 0 60px rgba(0,229,255,0.05),inset 0 0 60px rgba(0,0,0,0.5);display:block;width:100%;height:auto;cursor:crosshair;}
+#sphere-canvas.drag-cursor{cursor:grab;}
+.sphere-labels{display:flex;justify-content:space-between;width:100%;max-width:520px;margin-top:0.75rem;padding:0 1rem;}
+.btn-view-reset{font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:0.05em;padding:0.2rem 0.55rem;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.35);color:var(--accent);border-radius:3px;cursor:pointer;transition:all 0.15s;vertical-align:middle;}
+.btn-view-reset:hover{background:rgba(0,229,255,0.18);border-color:var(--accent);box-shadow:0 0 8px rgba(0,229,255,0.25);}
+.sphere-label{font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--muted);display:flex;align-items:center;gap:0.35rem;}
+.sphere-label .dot{width:8px;height:8px;border-radius:50%;}
+.dot-current{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+.dot-target{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+.dot-predict{background:#fff;box-shadow:0 0 8px rgba(255,255,255,0.6);}
+.world-progress{position:absolute;bottom:1.25rem;left:50%;transform:translateX(-50%);display:flex;gap:0.6rem;align-items:center;}
+.wp-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);transition:all 0.3s;}
+.wp-dot.done{background:var(--success);border-color:var(--success);}
+.wp-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
+.wp-sep{width:1px;height:12px;background:rgba(0,229,255,0.2);}
+.gate-tooltip-panel{position:absolute;bottom:7rem;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:0.6rem 1rem;font-size:0.76rem;color:#9bbfce;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:20;box-shadow:0 0 12px rgba(0,229,255,0.15);}
+.gate-tooltip-panel.visible{opacity:1;}
+.gate-tooltip-panel .gt-name{font-family:'Orbitron',sans-serif;font-size:0.68rem;color:var(--accent);margin-bottom:0.2rem;}
+.gate-tooltip-panel .gt-matrix{font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:0.2rem;}
+.gate-tooltip-panel .katex{font-size:0.85em;}
+
+/* WORLD COMPLETE */
+#screen-complete{align-items:center;justify-content:center;text-align:center;padding:2rem;}
+.complete-wrap{max-width:560px;animation:fadeUp 0.8s ease both;}
+.complete-title{font-family:'Orbitron',sans-serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:900;color:var(--success);text-shadow:0 0 40px rgba(16,185,129,0.5);margin-bottom:1rem;}
+.complete-sub{font-size:1rem;color:#9bbfce;line-height:1.7;margin-bottom:2rem;}
+.complete-stats{display:flex;justify-content:center;gap:2rem;margin-bottom:2.5rem;}
+.cstat{text-align:center;}
+.cstat-num{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:700;color:var(--accent);}
+.cstat-label{font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;}
+
+/* OVERLAYS */
+.overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(4,10,18,0.85);align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.active{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:2.5rem;max-width:480px;width:90%;text-align:center;animation:modalIn 0.3s ease both;}
+.modal-icon{font-size:3rem;margin-bottom:1rem;display:block;}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:0.75rem;}
+.modal-title.success{color:var(--success);text-shadow:0 0 20px rgba(16,185,129,0.4);}
+.modal-title.fail{color:var(--danger);}
+.modal-body{font-size:0.88rem;line-height:1.7;color:#9bbfce;margin-bottom:1.75rem;}
+.modal-body strong{color:var(--text);}
+.modal-btns{display:flex;gap:0.75rem;justify-content:center;}
+.modal-concept-wrap{margin-top:1rem;}
+.modal-concept-body{display:none;margin-top:0.65rem;padding:0.75rem 0.9rem;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);border-radius:4px;font-size:0.8rem;line-height:1.6;color:#c4b5fd;text-align:left;}
+.modal-concept-body p{margin-bottom:0.65rem;}
+.modal-concept-body p:last-child{margin-bottom:0;}
+.modal-concept-body .katex{font-size:0.9em;}
+#overlay-map{display:none;position:fixed;inset:0;z-index:100;background:rgba(4,10,18,0.92);align-items:flex-start;justify-content:center;backdrop-filter:blur(6px);overflow-y:auto;padding:2rem 1rem;}
+#overlay-map.active{display:flex;}
+.map-wrap{width:100%;max-width:860px;animation:modalIn 0.3s ease both;}
+.map-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.map-title{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:0.1em;}
+.map-close{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--muted);background:none;border:1px solid var(--border);border-radius:3px;padding:0.32rem 0.7rem;cursor:pointer;transition:all 0.15s;}
+.map-close:hover{color:var(--accent);border-color:var(--accent);}
+.map-world{margin-bottom:1.5rem;}
+.map-world-label{font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:0.4rem 0.75rem;border-radius:3px 3px 0 0;}
+.map-world-label.w0{background:rgba(156,163,175,0.15);color:#9ca3af;}
+.map-world-label.w1{background:rgba(0,229,255,0.12);color:#00e5ff;}
+.map-world-label.w2{background:rgba(124,58,237,0.15);color:#a78bfa;}
+.map-world-label.w3{background:rgba(245,158,11,0.12);color:#f59e0b;}
+.map-world-label.w4{background:rgba(239,68,68,0.12);color:#f87171;}
+.map-world-score{font-family:'Share Tech Mono',monospace;font-size:0.58rem;float:right;letter-spacing:0.05em;}
+.map-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;padding:0.65rem;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;background:rgba(0,0,0,0.2);}
+.map-levels.tut{grid-template-columns:repeat(6,1fr);}
+.map-level-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:0.65rem 0.75rem;cursor:pointer;transition:border-color 0.15s,background 0.15s,transform 0.1s;position:relative;overflow:hidden;}
+.map-level-card:hover{border-color:var(--accent);background:rgba(0,229,255,0.05);transform:translateY(-1px);}
+.map-level-card.current{border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,0.2);}
+.map-level-card.completed::after{content:'✓';position:absolute;top:0.35rem;right:0.5rem;font-size:0.65rem;color:var(--success);font-weight:bold;}
+.map-level-num{font-family:'Share Tech Mono',monospace;font-size:0.56rem;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.25rem;display:flex;justify-content:space-between;align-items:center;}
+.map-level-title{font-family:'Exo 2',sans-serif;font-size:0.75rem;font-weight:600;color:var(--text);margin-bottom:0.4rem;line-height:1.3;}
+.map-level-gates{display:flex;flex-wrap:wrap;gap:0.2rem;margin-bottom:0.35rem;}
+.map-gate-chip{font-family:'Orbitron',monospace;font-size:0.5rem;font-weight:700;padding:0.08rem 0.3rem;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--accent);border-radius:2px;}
+.map-level-score{font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:var(--gold);}
+.map-level-score.empty{color:var(--muted);}
+.map-score-bar-bg{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:0.3rem;}
+.map-score-bar-fill{height:100%;border-radius:2px;background:var(--gold);transition:width 0.4s ease;}
+#toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid var(--accent);border-radius:4px;padding:0.55rem 1.4rem;font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--accent);z-index:200;transition:transform 0.3s ease;pointer-events:none;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+.katex{font-size:1em;} .katex-display{overflow-x:auto;overflow-y:hidden;}
+.modal-body .katex{font-size:0.9em;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes panelPulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 0 2px var(--accent),0 0 16px rgba(0,229,255,0.3);}}
+.panel-attention{animation:panelPulse 1.8s ease-in-out 3;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+@keyframes chipIn{from{opacity:0;transform:scale(0.7);}to{opacity:1;transform:scale(1);}}
+@keyframes modalIn{from{opacity:0;transform:scale(0.9) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@media(max-width:700px){
+  #screen-game{flex-direction:column;}
+  .panel-left{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);}
+  #sphere-canvas{max-height:280px;}
+  .map-levels{grid-template-columns:repeat(2,1fr);}
+  .map-levels.tut{grid-template-columns:repeat(3,1fr);}
+}
+/* Gate introduction card overlay */
+.gate-card-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn 0.3s ease;}
+.gate-card{background:var(--bg2);border:1px solid var(--accent);border-radius:12px;padding:2rem 2.5rem;max-width:380px;text-align:center;box-shadow:0 0 30px rgba(0,229,255,0.2);}
+.gate-card h3{font-family:'Orbitron',sans-serif;color:var(--accent);font-size:1.1rem;margin-bottom:0.8rem;}
+.gate-card p{font-family:'Exo 2',sans-serif;color:var(--text);font-size:0.85rem;line-height:1.6;margin-bottom:1.2rem;}
+.gate-card button{font-family:'Share Tech Mono',monospace;padding:0.5rem 2rem;background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:6px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;}
+.gate-card button:hover{background:rgba(0,229,255,0.1);box-shadow:0 0 12px rgba(0,229,255,0.3);}
+
+/* Post-gate transform label */
+.transform-label{position:absolute;top:12%;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--accent);background:rgba(0,10,18,0.85);padding:0.3rem 0.8rem;border-radius:4px;border:1px solid rgba(0,229,255,0.3);opacity:0;transition:opacity 0.4s ease;pointer-events:none;z-index:10;white-space:nowrap;}
+.transform-label.visible{opacity:1;}
+
+/* Frozen sphere indicator */
+.frozen-badge{position:absolute;top:8%;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;color:var(--gold);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);padding:0.25rem 0.8rem;border-radius:4px;z-index:10;pointer-events:none;}
+
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<canvas id="star-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;"></canvas>
+
+<!-- TITLE SCREEN -->
+<div id="screen-title" class="screen active">
+  <div class="title-wrap">
+    <p class="title-eyebrow">// Station Helix-7 — Quantum Memory Core</p>
+    <h1 class="title-main">QUBIT<br>QUEST</h1>
+    <p class="title-sub">A quantum state manipulation game</p>
+    <div class="story-box">
+      <span class="callsign">// INCOMING TRANSMISSION — PRIORITY ALPHA</span>
+      Engineer. The station's <strong>quantum memory core</strong> has been scrambled by a rogue AI.
+      Quantum computers store information as <strong>qubits</strong> — the quantum equivalent of a bit.
+      A rogue AI has used <strong>quantum gates</strong> to scramble those qubits into the wrong states.
+      Your job is to unscramble them by applying the correct sequence of gates.<br><br>
+      Each chamber is locked behind a quantum state — a qubit frozen in the wrong configuration.
+      Apply quantum gates to rotate each qubit on a live 3D Bloch Sphere to match the target state and unlock the chamber.<br><br>
+      No quantum physics degree required. The sphere will guide you.
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;align-items:center;flex-direction:column">
+      <p class="callsign" style="margin-bottom:0.3rem">// SECURITY CLEARANCE</p>
+      <p style="font-family:'Exo 2',sans-serif;font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">Have you operated quantum gate systems before?</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center">
+        <button class="btn-primary" onclick="startNewRecruit()">New Recruit</button>
+        <button class="btn-primary" onclick="startReturning()" style="border-color:var(--muted);color:var(--muted)">Returning Engineer</button>
+      </div>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:var(--muted);letter-spacing:0.08em;margin-top:0.3rem;text-align:center;max-width:320px;line-height:1.5">
+        NEW RECRUIT — Start from tutorial, guided introduction<br>
+        RETURNING ENGINEER — Skip to mission map
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="screen-game" class="screen">
+  <div class="panel-left" id="panel-left">
+    <div class="level-header">
+      <div class="level-tag" id="level-tag">Tutorial · T1</div>
+      <div class="level-title" id="level-title">The Qubit</div>
+      <span class="type-badge apply" id="type-badge">Apply</span>
+    </div>
+    <div class="reading-zone">
+      <div class="zone-label">// Mission</div>
+      <div class="mission-text" id="mission-text">Loading...</div>
+      <div id="state-display">
+        <div class="state-row">
+          <span class="state-label">CURRENT</span>
+          <span class="state-value current" id="current-state">|0⟩</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">TARGET</span>
+          <span class="state-value target" id="target-state">|1⟩</span>
+        </div>
+      </div>
+    </div>
+    <hr class="zone-divider">
+    <div id="action-zone"></div>
+    <div class="concept-box" id="concept-box">
+      <div class="concept-toggle" onclick="toggleConcept()">
+        <div class="concept-title">// Concept</div>
+        <span class="concept-chevron" id="concept-chevron">▾</span>
+      </div>
+      <div class="concept-body" id="concept-text"></div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="hud-bar">
+      <div class="hud-item">LEVEL<span id="hud-level">T1</span></div>
+      <div class="hud-item">SCORE<span id="hud-score">0</span></div>
+      <div class="hud-item" style="display:flex;align-items:center;gap:0.4rem">
+        <button class="hud-map-btn" onclick="openMap('game')">⊞ MAP</button>
+        <button class="hud-map-btn" onclick="confirmMainMenu()" style="border-color:rgba(239,68,68,0.3);color:var(--muted)">⌂ MENU</button>
+      </div>
+    </div>
+    <div class="world-banner" id="world-banner">WORLD <span id="world-name">0 — STATION ORIENTATION</span></div>
+    <div class="sphere-wrap" style="position:relative">
+      <canvas id="sphere-canvas" width="520" height="520"></canvas>
+      <div class="transform-label" id="transform-label"></div>
+      <div class="frozen-badge" id="frozen-badge" style="display:none">BUILDING CIRCUIT</div>
+    </div>
+    <div class="sphere-labels" id="sphere-labels">
+      <div class="sphere-label"><div class="dot dot-current"></div> Current state</div>
+      <div class="sphere-label">
+        Bloch Sphere <span style="color:var(--accent);margin-left:4px">↻ drag to rotate</span>
+        <button class="btn-view-reset" onclick="resetSphereView()" title="Reset sphere view">⟳ Reset View</button>
+      </div>
+      <div class="sphere-label"><div class="dot dot-target"></div> Target state</div>
+    </div>
+    <div class="gate-tooltip-panel" id="gate-tooltip">
+      <div class="gt-name" id="gt-name"></div>
+      <div id="gt-desc"></div>
+      <div class="gt-matrix" id="gt-matrix"></div>
+    </div>
+    <div class="world-progress" id="world-progress"></div>
+  </div>
+</div>
+
+<!-- WORLD COMPLETE SCREEN -->
+<div id="screen-complete" class="screen">
+  <div class="complete-wrap">
+    <div class="complete-title" id="complete-title">⬡ TUTORIAL CLEAR</div>
+    <p class="complete-sub" id="complete-sub"></p>
+    <div class="complete-stats">
+      <div class="cstat"><div class="cstat-num" id="final-score">0</div><div class="cstat-label">Score</div></div>
+      <div class="cstat"><div class="cstat-num" id="final-levels">0</div><div class="cstat-label">Levels Done</div></div>
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <button class="btn-primary" id="complete-primary-btn">Continue →</button>
+      <button class="btn-primary" id="complete-secondary-btn" style="border-color:var(--muted);color:var(--muted)">⊞ World Map</button>
+      <button class="btn-primary" id="complete-tertiary-btn" style="border-color:var(--muted);color:var(--muted)">⌂ Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="overlay-map">
+  <div class="map-wrap">
+    <div class="map-header">
+      <div class="map-title">⊞ MISSION SELECT — STATION HELIX-7</div>
+      <button class="map-close" onclick="closeMap()">✕ CLOSE</button>
+    </div>
+    <div id="map-content"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-success">
+  <div class="modal">
+    <span class="modal-icon" id="success-icon">✦</span>
+    <div class="modal-title success" id="success-title">Chamber Unlocked!</div>
+    <div class="modal-body" id="success-body"></div>
+    <div class="modal-btns">
+      <button class="btn-primary" id="success-primary-btn">Next →</button>
+      <button class="btn-sm" id="success-retry-btn" style="display:none;flex:none;padding:0.65rem 1.4rem" onclick="retryFromSuccess()">↩ Retry</button>
+    </div>
+    <div class="modal-concept-wrap">
+      <button class="btn-sm" id="success-read-btn" style="display:none;width:100%;padding:0.5rem">// Why did that work?</button>
+      <div class="modal-concept-body" id="success-concept-panel"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-fail">
+  <div class="modal">
+    <span class="modal-icon">✕</span>
+    <div class="modal-title fail" id="fail-title">Wrong State</div>
+    <div class="modal-body" id="fail-body"></div>
+    <div class="modal-btns">
+      <button class="btn-sm" id="fail-retry-btn" style="flex:none;padding:0.65rem 1.8rem" onclick="retryLevel()">Try Again</button>
+      <button class="btn-sm" id="fail-hint-btn" style="flex:none;padding:0.65rem 1.8rem" onclick="showHint()">Show Hint</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-confirm-menu">
+  <div class="modal" style="max-width:360px">
+    <span class="modal-icon" style="font-size:2rem">⌂</span>
+    <div class="modal-title" style="color:var(--text)">Return to Main Menu?</div>
+    <div class="modal-body">Your current level progress will be lost. Completed level scores are preserved.</div>
+    <div class="modal-btns">
+      <button class="btn-sm" style="flex:none;padding:0.65rem 1.4rem" onclick="closeOverlay('overlay-confirm-menu')">Cancel</button>
+      <button class="btn-sm danger" style="flex:none;padding:0.65rem 1.4rem" onclick="goToMainMenu()">Yes, Menu</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="gate-card-overlay" class="gate-card-overlay" style="display:none" onclick="dismissGateCard()">
+  <div class="gate-card" onclick="event.stopPropagation()">
+    <h3 id="gate-card-name"></h3>
+    <p id="gate-card-desc"></p>
+    <button onclick="dismissGateCard()">Got it</button>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════════
+   1. KATEX
+   ════════════════════════════════════════════════════════════════ */
+function renderMath(el) {
+  if (!el || typeof renderMathInElement === 'undefined') return;
+  renderMathInElement(el, {
+    delimiters: [{ left: '$', right: '$', display: false }],
+    throwOnError: false,
+    errorColor: 'var(--muted)',
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   2. CONSTANTS & LEVEL DEFINITIONS
+   ════════════════════════════════════════════════════════════════ */
+const PI = Math.PI;
+const LT = { APPLY:'apply', PREDICT:'predict', DECONSTRUCT:'deconstruct', EVALUATE:'evaluate', SANDBOX:'sandbox' };
+
+const WORLDS = [
+  { num:0, colorClass:'w0', name:'Station Orientation', mapName:'World 0 — Station Orientation',
+    completedTitle:'⬡ ORIENTATION COMPLETE',
+    completedStory:'All five gates are now in your hands and you have seen the Bloch Sphere respond to each one. The free exploration period is over — the mission begins now.<br><br>You have the complete single-qubit toolkit. Everything from here is about using it.',
+    levelRange:[0,5] },
+  { num:1, colorClass:'w1', name:'The Quantum Awakening', mapName:'World 1 — The Quantum Awakening',
+    completedTitle:'⬡ WORLD 1 CLEAR',
+    completedStory:'Five chambers restored. You have navigated the Bloch Sphere using multi-gate sequences, discovered that gate order changes outcomes, and found that some gates do nothing to certain states.<br><br>You are applying quantum mechanics — not just reading about it.',
+    levelRange:[6,10] },
+  { num:2, colorClass:'w2', name:'Dark Chambers', mapName:'World 2 — Dark Chambers',
+    completedTitle:'⬡ WORLD 2 CLEAR',
+    completedStory:'The secondary memory banks are restored. You have worked backwards from outcomes to circuits — a fundamentally different cognitive task from applying gates forward.<br><br>Circuit inversion is the foundation of quantum error correction and compiler design. You have done it.',
+    levelRange:[11,14] },
+  { num:3, colorClass:'w3', name:'Signal Forecast', mapName:'World 3 — Signal Forecast',
+    completedTitle:'⬡ WORLD 3 CLEAR',
+    completedStory:'The navigation core is back online. You have predicted circuit outcomes before seeing them execute — committing to a mental model and testing it against reality.<br><br>The difference between applying gates and understanding them is closing.',
+    levelRange:[15,17] },
+  { num:4, colorClass:'w4', name:'The Memory Core', mapName:'World 4 — The Memory Core',
+    completedTitle:'⬡ THE MEMORY CORE RESTORED — HELIX-7 ONLINE',
+    completedStory:'All chambers unlocked. The quantum memory core is fully operational.<br><br>You have applied, predicted, deconstructed, and evaluated quantum gate sequences. You understand reversibility, circuit equivalence, and the complete single-qubit state space. These five gates — X, Y, Z, H, S — together with CNOT form a universal gate set. The Bloch Sphere is fully yours.',
+    levelRange:[18,20] },
+];
+
+const LEVELS = [
+
+  /* ── TUTORIAL: Station Orientation (T1–T6) ───────────────── */
+  { id:'T1', world:0, type:LT.APPLY,
+    tag:'Tutorial · T1', title:'The Qubit',
+    mission:'You are looking at a Bloch Sphere — a map of every state a single qubit can occupy. Every gate in this game is a rotation on this sphere. The glowing arrow is your qubit. The gold dot is your target. Apply the X gate.',
+    startState:{theta:0,phi:0}, targetState:{theta:PI,phi:0}, startLabel:'|0⟩', targetLabel:'|1⟩',
+    availableGates:['X'], solution:['X'],
+    successMsg:'The X gate flipped the qubit from $|0\\rangle$ to $|1\\rangle$. That arrow moving between poles is a real quantum state transformation.',
+    concept:`<p>A qubit is the fundamental unit of quantum information. Unlike a classical bit which is either 0 or 1, a qubit can occupy any point on this sphere — poles, equator, or anywhere in between. The poles $|0\\rangle$ and $|1\\rangle$ are the only two states with a definite value. Everything else is superposition.</p>
+<p>The X gate is the Pauli-X operator: $X = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$. It performs a 180° rotation around the X axis, mapping $|0\\rangle \\to |1\\rangle$ and $|1\\rangle \\to |0\\rangle$. It is the quantum analogue of a classical NOT gate.</p>
+<p>Any single-qubit gate can be understood as a rotation on this sphere. The axis and angle of rotation determine everything about what a gate does.</p>` },
+
+  { id:'T2', world:0, type:LT.APPLY,
+    tag:'Tutorial · T2', title:'Superposition',
+    mission:'The equator of the sphere represents superposition. The target is $|{+}\\rangle$, on the equator directly ahead. Apply the H gate.',
+    startState:{theta:0,phi:0}, targetState:{theta:PI/2,phi:0}, startLabel:'|0⟩', targetLabel:'|+⟩',
+    availableGates:['X','H'], solution:['H'],
+    successMsg:'H moved the qubit from the north pole to the equator. That state has no definite value yet — a measurement would give $|0\\rangle$ or $|1\\rangle$ with equal probability.',
+    concept:`<p>The Hadamard gate $H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$ creates superposition: $H|0\\rangle = |{+}\\rangle = \\frac{1}{\\sqrt{2}}(|0\\rangle + |1\\rangle)$.</p>
+<p>H is self-inverse: $H^2 = I$. Applying it twice returns you exactly to where you started. The four named equator states are $|{+}\\rangle$, $|{+i}\\rangle$, $|{-}\\rangle$, $|{-i}\\rangle$, each 90° apart in phase.</p>` },
+
+  { id:'T3', world:0, type:LT.APPLY,
+    tag:'Tutorial · T3', title:'Phase Flip',
+    mission:'A new gate — Z. It rotates around the vertical axis. From $|{+}\\rangle$, apply Z to reach $|{-}\\rangle$.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI/2,phi:PI}, startLabel:'|+⟩', targetLabel:'|−⟩',
+    availableGates:['X','Z','H'], solution:['Z'],
+    successMsg:'Z rotated the qubit 180° around the Z axis, flipping $|{+}\\rangle$ to $|{-}\\rangle$. Phase gates spin the state around the equator without leaving it.',
+    concept:`<p>The Z gate $Z = \\begin{pmatrix} 1 & 0 \\\\ 0 & -1 \\end{pmatrix}$ flips relative phase: $|{+}\\rangle \\leftrightarrow |{-}\\rangle$. Both give 50/50 measurement outcomes but respond completely differently to subsequent gates.</p>
+<p>Z leaves the poles unchanged: $Z|0\\rangle = |0\\rangle$ and $Z|1\\rangle = -|1\\rangle$ (a global phase, physically unobservable on the Bloch sphere).</p>` },
+
+  { id:'T4', world:0, type:LT.APPLY,
+    tag:'Tutorial · T4', title:'Quarter Turn',
+    mission:'A new gate — S. It rotates 90° around the vertical axis. From $|{+}\\rangle$, reach $|{+i}\\rangle$.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI/2,phi:PI/2}, startLabel:'|+⟩', targetLabel:'|+i⟩',
+    availableGates:['X','Z','H','S'], solution:['S'],
+    successMsg:'S advanced the phase 90°, taking $|{+}\\rangle$ to $|{+i}\\rangle$. S is the gate that moves you around the equator one quarter-turn at a time.',
+    concept:`<p>The S gate $S = \\begin{pmatrix} 1 & 0 \\\\ 0 & i \\end{pmatrix}$ performs a 90° phase rotation. Since $S^2 = Z$, two S gates equal one Z.</p>
+<p>The four equator states cycle under S: $|{+}\\rangle \\to |{+i}\\rangle \\to |{-}\\rangle \\to |{-i}\\rangle \\to |{+}\\rangle$.</p>` },
+
+  { id:'T5', world:0, type:LT.APPLY,
+    tag:'Tutorial · T5', title:'The Y Axis',
+    mission:'The final gate — Y. Apply it from $|{+}\\rangle$ to reach $|{-}\\rangle$.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI/2,phi:PI}, startLabel:'|+⟩', targetLabel:'|−⟩',
+    availableGates:['X','Y','Z','H'], solution:['Y'],
+    successMsg:'Y reached the same destination as Z from this starting point — but for a different reason. Z spins around the vertical axis, only affecting phase. Y rotates around the Y axis, simultaneously flipping both the up-down position and the phase. From other states they behave completely differently. Try Z from $|0\\rangle$ and then Y from $|0\\rangle$ in the sandbox to see the contrast.',
+    concept:`<p>The Y gate $Y = \\begin{pmatrix} 0 & -i \\\\ i & 0 \\end{pmatrix}$ rotates 180° around the Y axis.</p>
+<p>The three Pauli gates have distinct personalities: X flips between poles ($|0\\rangle \\leftrightarrow |1\\rangle$) and leaves the equator's horizontal position unchanged. Z only affects phase — it spins states around the equator and does nothing at the poles. Y does both simultaneously — it flips poles AND reverses phase. From $|{+}\\rangle$ all three reach an equator point, but from $|0\\rangle$ or $|1\\rangle$ only X and Y flip between poles while Z does nothing visible.</p>
+<p>Any single-qubit gate can be decomposed into rotations around these three axes. The Pauli matrices are the generators of all single-qubit rotations.</p>` },
+
+  { id:'T6', world:0, type:LT.SANDBOX,
+    tag:'Tutorial · T6', title:'Free Exploration',
+    mission:'All gates are available. No target. No score. Explore the sphere freely — apply gates in any order, undo them, reset. When you are ready to begin the mission, press the button below.',
+    startState:{theta:0,phi:0}, targetState:null, startLabel:'|0⟩', targetLabel:'—',
+    availableGates:['X','Y','Z','H','S'], solution:[], concept:'', successMsg:'' },
+
+  /* ── WORLD 1: The Quantum Awakening (5 Apply levels) ─────── */
+  { id:'L1', world:1, type:LT.APPLY,
+    tag:'World 1 · L1', title:'First Sequence',
+    mission:'Chamber 1. The first real test. Start: $|0\\rangle$. Target: $|{-}\\rangle$.',
+    startState:{theta:0,phi:0}, targetState:{theta:PI/2,phi:PI}, startLabel:'|0⟩', targetLabel:'|−⟩',
+    availableGates:['X','H'], solution:['X','H'],
+    successMsg:'Two gates to reach $|{-}\\rangle$. Multiple sequences can produce identical final states — one of the most useful properties of quantum circuits.',
+    concept:`<p>$|{-}\\rangle = \\frac{1}{\\sqrt{2}}(|0\\rangle - |1\\rangle)$ differs from $|{+}\\rangle$ only in the sign of the $|1\\rangle$ component. Both give 50/50 measurement outcomes but are physically distinct states.</p>
+<p>Multiple paths reach $|{-}\\rangle$ from $|0\\rangle$: X→H and H→Z both work. The existence of multiple valid decompositions is fundamental to quantum circuits. Circuit compilers exploit this equivalence to find shorter or more noise-resistant paths.</p>` },
+
+  { id:'L2', world:1, type:LT.APPLY,
+    tag:'World 1 · L2', title:'The Other Pole',
+    mission:'Chamber 2. Start: $|1\\rangle$. Target: $|{+}\\rangle$.',
+    startState:{theta:PI,phi:0}, targetState:{theta:PI/2,phi:0}, startLabel:'|1⟩', targetLabel:'|+⟩',
+    availableGates:['X','Z','H'], solution:['H','Z'],
+    successMsg:'H from $|1\\rangle$ goes to $|{-}\\rangle$, not $|{+}\\rangle$. The same gate, different starting state, different destination. Context changes everything.',
+    concept:`<p>H maps poles to equator points asymmetrically: $H|0\\rangle = |{+}\\rangle$ and $H|1\\rangle = |{-}\\rangle$. To reach $|{+}\\rangle$ from $|1\\rangle$, you need to account for this.</p>
+<p>H is simultaneously unitary, Hermitian, and self-inverse — a unique combination among common quantum gates.</p>` },
+
+  { id:'L3', world:1, type:LT.APPLY,
+    tag:'World 1 · L3', title:'Order Matters',
+    mission:'Chamber 3. Start: $|1\\rangle$. Target: $|{-i}\\rangle$. Gates: H, S.',
+    startState:{theta:PI,phi:0}, targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|1⟩', targetLabel:'|−i⟩',
+    availableGates:['X','Z','H','S'], solution:['H','S'],
+    successMsg:'H→S reaches $|{-i}\\rangle$. But S→H? S does nothing at the pole — no superposition means no relative phase to rotate. Gate order changes everything.',
+    concept:`<p>Quantum gates do not commute — $AB \\neq BA$ in general. S rotates the phase of the $|1\\rangle$ component relative to $|0\\rangle$, but only has visible effect when both components are present in superposition.</p>
+<p>When the qubit sits at a pole, S adds only a global phase (physically unobservable). This is why $S \\to H$ only reaches $|{-}\\rangle$ while $H \\to S$ reaches $|{-i}\\rangle$.</p>` },
+
+  { id:'L4', world:1, type:LT.APPLY,
+    tag:'World 1 · L4', title:'Phase Navigator',
+    mission:'Chamber 4. Start: $|{+}\\rangle$. Target: $|{-i}\\rangle$. Score scales with efficiency.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|+⟩', targetLabel:'|−i⟩',
+    availableGates:['X','Y','Z','H','S'], solution:['Z','S'],
+    successMsg:'Two gates — both act on phase without leaving the equator. Staying on the equator avoids unnecessary detours through the poles.',
+    concept:`<p>Gate count matters in real quantum hardware because each gate has a fidelity less than one — errors accumulate with every operation. The direct equator path is Z (180° phase) then S (90° phase), reaching $|{-i}\\rangle$ in two operations.</p>
+<p>Circuit optimisation — finding the minimum gate sequence for a target transformation — is an active research area. The intuition you build navigating the sphere is directly analogous to what quantum compiler tools do algorithmically.</p>` },
+
+  { id:'L5', world:1, type:LT.APPLY,
+    tag:'World 1 · L5', title:'Hidden Gate',
+    mission:'Chamber 5. Start: $|{+i}\\rangle$. Target: $|0\\rangle$.',
+    startState:{theta:PI/2,phi:PI/2}, targetState:{theta:0,phi:0}, startLabel:'|+i⟩', targetLabel:'|0⟩',
+    availableGates:['X','Y','Z','H','S'], solution:['S','Z','H'],
+    successMsg:'H and Y both leave $|{+i}\\rangle$ unchanged — they cannot help until the qubit is somewhere else. The path required escaping to a state where H could act.',
+    concept:`<p>$|{+i}\\rangle$ and $|{-i}\\rangle$ are eigenstates of H — applying H leaves them unchanged. Y is similarly invisible because $|{+i}\\rangle$ lies on its rotation axis.</p>
+<p>A gate does nothing to a state that sits on its rotation axis. Sometimes you must first move the qubit to a state where a necessary gate has an effect — a pre-conditioning step.</p>` },
+
+  /* ── WORLD 2: Dark Chambers (4 Deconstruct levels) ────────── */
+  { id:'L6', world:2, type:LT.DECONSTRUCT,
+    tag:'World 2 · L6', title:'Reverse Engineer',
+    mission:'This chamber\'s qubit was transformed from $|{+}\\rangle$ to $|1\\rangle$ using exactly 2 gates from {X, H}. The sphere is frozen. Identify the sequence and submit.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI,phi:0}, startLabel:'|+⟩', targetLabel:'|1⟩',
+    availableGates:['X','H'], solution:['H','X'], gateCount:2,
+    successMsg:'You identified a valid circuit from its input and output alone — without the sphere guiding you. H moves $|{+}\\rangle$ to $|0\\rangle$, then X flips to $|1\\rangle$.',
+    concept:`<p>Circuit inversion — deducing a gate sequence from its input/output pair — is a fundamental skill in quantum computing. Error correction, circuit verification, and compiler optimisation all depend on it.</p>` },
+
+  { id:'L7', world:2, type:LT.DECONSTRUCT,
+    tag:'World 2 · L7', title:'The Missing Gate',
+    mission:'This chamber\'s qubit was transformed from $|{+i}\\rangle$ to $|1\\rangle$ using exactly 2 gates from {H, S}. There is only one valid answer.',
+    startState:{theta:PI/2,phi:PI/2}, targetState:{theta:PI,phi:0}, startLabel:'|+i⟩', targetLabel:'|1⟩',
+    availableGates:['H','S'], solution:['S','H'], gateCount:2,
+    successMsg:'S→H is the only path. S advances $|{+i}\\rangle$ to $|{-}\\rangle$, then H maps $|{-}\\rangle$ to $|1\\rangle$. When there\'s a single valid answer, finding it requires genuine understanding.',
+    concept:`<p>Only S→H works because S must first move the qubit off the H eigenstate ($|{+i}\\rangle$ is unchanged by H). Uniqueness of decomposition signals that the transformation has a specific mathematical structure.</p>` },
+
+  { id:'L8', world:2, type:LT.DECONSTRUCT,
+    tag:'World 2 · L8', title:'Phase Inversion',
+    mission:'This chamber\'s qubit was transformed from $|{-}\\rangle$ to $|0\\rangle$ using exactly 2 gates from {X, Z, H}. Multiple valid answers exist.',
+    startState:{theta:PI/2,phi:PI}, targetState:{theta:0,phi:0}, startLabel:'|−⟩', targetLabel:'|0⟩',
+    availableGates:['X','Z','H'], solution:['Z','H'], gateCount:2,
+    successMsg:'Z→H works: Z flips $|{-}\\rangle$ to $|{+}\\rangle$, then H maps $|{+}\\rangle$ to $|0\\rangle$. But H→X also works. Multiple valid decompositions.',
+    concept:`<p>Multiple valid decompositions reflect that different physical paths can produce the same transformation. In real quantum hardware, a compiler would choose based on which gates have lower error rates on the specific device.</p>` },
+
+  { id:'L9', world:2, type:LT.DECONSTRUCT,
+    tag:'World 2 · L9', title:'The Eigenstate Trap',
+    mission:'This chamber\'s qubit was transformed from $|{+i}\\rangle$ to $|{+}\\rangle$ using exactly 2 gates from {X, Y, S}. One gate in the set does nothing to this state.',
+    startState:{theta:PI/2,phi:PI/2}, targetState:{theta:PI/2,phi:0}, startLabel:'|+i⟩', targetLabel:'|+⟩',
+    availableGates:['X','Y','S'], solution:['X','S'], gateCount:2,
+    successMsg:'X→S: X moves $|{+i}\\rangle$ to $|{-i}\\rangle$, then S advances $|{-i}\\rangle$ to $|{+}\\rangle$. Y does nothing to $|{+i}\\rangle$ — it\'s the trap gate in the available set.',
+    concept:`<p>Including a gate that has no effect on the starting state is intentional misdirection. Recognising which gates are ineffective — by knowing eigenstate relationships — is the key skill being tested.</p>` },
+
+  /* ── WORLD 3: Signal Forecast (3 Predict levels) ─────────── */
+  { id:'L10', world:3, type:LT.PREDICT,
+    tag:'World 3 · L10', title:'Two-Gate Trace',
+    mission:'The sequence Y→S has been applied to this chamber starting from $|{+}\\rangle$. Click the sphere where you think the qubit will land, then confirm.',
+    startState:{theta:PI/2,phi:0}, targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|+⟩', targetLabel:'|−i⟩',
+    predictSequence:['Y','S'], availableGates:['Y','S'], solution:['Y','S'],
+    predictVariants:[
+      { startState:{theta:PI/2,phi:0},   targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|+⟩',  targetLabel:'|−i⟩' },
+      { startState:{theta:PI/2,phi:PI},  targetState:{theta:PI/2,phi:PI/2},   startLabel:'|−⟩',  targetLabel:'|+i⟩' },
+      { startState:{theta:0,phi:0},      targetState:{theta:PI,phi:0},        startLabel:'|0⟩',  targetLabel:'|1⟩'  },
+      { startState:{theta:PI,phi:0},     targetState:{theta:0,phi:0},         startLabel:'|1⟩',  targetLabel:'|0⟩'  },
+    ],
+    successMsg:'Y→S from $|{+}\\rangle$: Y rotates $|{+}\\rangle$ to $|{-}\\rangle$, then S advances $|{-}\\rangle$ to $|{-i}\\rangle$. Each gate changes the context for the next.',
+    concept:`<p>Predicting multi-gate sequences requires tracking state transformations step by step — knowing how the state after the first gate affects what the second gate does. This is the core skill for reasoning about quantum circuits.</p>` },
+
+  { id:'L11', world:3, type:LT.PREDICT,
+    tag:'World 3 · L11', title:'The Eigenstate Test',
+    mission:'The sequence S→Y has been applied starting from $|{+i}\\rangle$. Where does the qubit land?',
+    startState:{theta:PI/2,phi:PI/2}, targetState:{theta:PI/2,phi:0}, startLabel:'|+i⟩', targetLabel:'|+⟩',
+    predictSequence:['S','Y'], availableGates:['S','Y'], solution:['S','Y'],
+    predictVariants:[
+      { startState:{theta:PI/2,phi:PI/2},    targetState:{theta:PI/2,phi:0},       startLabel:'|+i⟩', targetLabel:'|+⟩'  },
+      { startState:{theta:PI/2,phi:3*PI/2},  targetState:{theta:PI/2,phi:PI},      startLabel:'|−i⟩', targetLabel:'|−⟩'  },
+      { startState:{theta:PI/2,phi:0},       targetState:{theta:PI/2,phi:PI/2},    startLabel:'|+⟩',  targetLabel:'|+i⟩' },
+      { startState:{theta:PI/2,phi:PI},      targetState:{theta:PI/2,phi:3*PI/2},  startLabel:'|−⟩',  targetLabel:'|−i⟩' },
+    ],
+    successMsg:'S→Y from $|{+i}\\rangle$: S advances $|{+i}\\rangle$ to $|{-}\\rangle$, then Y rotates $|{-}\\rangle$ to $|{+}\\rangle$.',
+    concept:`<p>Some variants are eigenstate traps — Y does nothing to $|{+i}\\rangle$ and $|{-i}\\rangle$, so the result is just what S produces alone. Recognising when a gate is invisible is as important as knowing what it does when active.</p>` },
+
+  { id:'L12', world:3, type:LT.PREDICT,
+    tag:'World 3 · L12', title:'Three-Gate Simulation',
+    mission:'The sequence H→S→Z has been applied starting from $|0\\rangle$. Three gates. Where does the qubit land?',
+    startState:{theta:0,phi:0}, targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|0⟩', targetLabel:'|−i⟩',
+    predictSequence:['H','S','Z'], availableGates:['Z','H','S'], solution:['H','S','Z'],
+    predictVariants:[
+      { startState:{theta:0,phi:0},     targetState:{theta:PI/2,phi:3*PI/2}, startLabel:'|0⟩', targetLabel:'|−i⟩' },
+      { startState:{theta:PI,phi:0},    targetState:{theta:PI/2,phi:PI/2},   startLabel:'|1⟩', targetLabel:'|+i⟩' },
+      { startState:{theta:PI/2,phi:0},  targetState:{theta:0,phi:0},         startLabel:'|+⟩', targetLabel:'|0⟩'  },
+      { startState:{theta:PI/2,phi:PI}, targetState:{theta:PI,phi:0},        startLabel:'|−⟩', targetLabel:'|1⟩'  },
+    ],
+    successMsg:'H→S→Z from $|0\\rangle$: H creates $|{+}\\rangle$, S advances to $|{+i}\\rangle$, Z flips phase to $|{-i}\\rangle$. Three steps, each changing the landscape for the next.',
+    concept:`<p>Three-gate mental simulation. The ability to trace a circuit forward without seeing it execute is the entry point to quantum circuit reasoning. Algorithm designers do this constantly — tracing circuits to verify correctness before running them on hardware.</p>` },
+
+  /* ── WORLD 4: The Memory Core (3 Capstone levels) ────────── */
+  { id:'L13', world:4, type:LT.EVALUATE,
+    tag:'World 4 · L13', title:'Two Roads',
+    mission:'Two sequences are proposed for this chamber, both starting from $|{+i}\\rangle$ with target $|1\\rangle$. Evaluate them before the sphere moves — which one works, and why does the other fail?',
+    startState:{theta:PI/2,phi:PI/2}, targetState:{theta:PI,phi:0}, startLabel:'|+i⟩', targetLabel:'|1⟩',
+    availableGates:['H','S'],
+    evalSequences:[
+      { label:'A', gates:['S','H'], result:'|1⟩' },
+      { label:'B', gates:['H','S'], result:'|−⟩' },
+    ],
+    evalQuestions:[
+      { text:'Which sequence reaches $|1\\rangle$ from $|{+i}\\rangle$?',
+        options:['Sequence A (S→H)','Sequence B (H→S)','Both reach $|1\\rangle$','Neither reaches $|1\\rangle$'],
+        correct:0 },
+      { text:'Why does the other sequence fail?',
+        options:[
+          'S cannot act on $|{+i}\\rangle$',
+          'H does nothing to $|{+i}\\rangle$ because it sits on H\'s rotation axis',
+          'The two gates cancel each other out',
+          'Both sequences need a third gate',
+        ],
+        correct:1 },
+    ],
+    solution:['S','H'],
+    successMsg:'S→H reaches $|1\\rangle$. H→S fails because $|{+i}\\rangle$ is an eigenstate of H — it sits on H\'s rotation axis, so H does nothing. S then acts on the unchanged $|{+i}\\rangle$ and only reaches $|{-}\\rangle$.',
+    concept:`<p>Non-commutativity made visible through eigenstate failure. The same two gates in opposite order produce completely different results because one ordering encounters an eigenstate that the other avoids.</p>
+<p>Evaluating circuits requires not just knowing what each gate does in isolation, but reasoning about how the state after the first gate constrains what the second gate can accomplish.</p>` },
+
+  { id:'L14', world:4, type:LT.DECONSTRUCT,
+    tag:'World 4 · L14', title:'Circuit Inversion',
+    mission:'This chamber\'s qubit was transformed from $|{-}\\rangle$ to $|0\\rangle$ using exactly 2 gates from {Y, H, S}. Find the sequence.',
+    startState:{theta:PI/2,phi:PI}, targetState:{theta:0,phi:0}, startLabel:'|−⟩', targetLabel:'|0⟩',
+    availableGates:['Y','H','S'], solution:['Y','H'], gateCount:2,
+    successMsg:'Y→H: Y rotates $|{-}\\rangle$ to $|{+}\\rangle$, then H maps $|{+}\\rangle$ to $|0\\rangle$. The hardest deconstruct — full confidence in backward reasoning.',
+    concept:`<p>Multiple valid answers exist (Y→H and H→Y both work). The gate set {Y, H, S} prevents reuse of Z→H (used in L8). Working backwards from an endpoint is how quantum algorithm designers construct circuits.</p>` },
+
+  { id:'L15', world:4, type:LT.APPLY,
+    tag:'World 4 · L15 ★', title:'The Memory Core',
+    mission:'Final chamber. Start: $|{-i}\\rangle$. Target: $|1\\rangle$. The minimum is 3 gates.',
+    startState:{theta:PI/2,phi:3*PI/2}, targetState:{theta:PI,phi:0}, startLabel:'|−i⟩', targetLabel:'|1⟩',
+    availableGates:['X','Y','H','S'], solution:['X','S','H'],
+    successMsg:'The Memory Core is restored. You have applied, predicted, deconstructed, and evaluated quantum gate sequences across the full Bloch Sphere.',
+    concept:`<p>X→S→H: X moves $|{-i}\\rangle$ to $|{+i}\\rangle$, S advances to $|{-}\\rangle$, H maps $|{-}\\rangle$ to $|1\\rangle$.</p>
+<p>You have now used X, Y, Z, H, and S to navigate the complete single-qubit state space. These five gates, together with the two-qubit CNOT gate, form a universal gate set — sufficient to approximate any quantum computation to arbitrary precision. The next frontier is entanglement — two qubits, a CNOT gate, and a state space that cannot be drawn on a single sphere.</p>` },
+];
+
+/* Optimal gate counts per level (index matches LEVELS array).
+   Predict/Evaluate/Sandbox = 0 (not scored by gate count). */
+//                T1 T2 T3 T4 T5 T6  L1 L2 L3 L4 L5  L6 L7 L8 L9  L10 L11 L12  L13 L14 L15
+const OPTIMAL_GATES = [
+  1, 1, 1, 1, 1, 0,   // Tutorial
+  2, 2, 2, 2, 3,      // World 1
+  2, 2, 2, 2,         // World 2
+  0, 0, 0,            // World 3
+  0, 2, 3             // World 4
+];
+
+
+/* ════════════════════════════════════════════════════════════════
+   3. GAME STATE
+   ════════════════════════════════════════════════════════════════ */
+let currentLevelIdx  = 0;
+let appliedGates     = [];
+let currentState     = { theta: 0, phi: 0 };
+let totalScore       = 0;
+
+const levelBestScores = {};
+const levelCompleted  = {};
+
+// Mode-specific state
+let predictMarkerPos      = null;
+let predictConfirmed      = false;
+let currentPredictVariant = 0;  // index into lvl.predictVariants (if present)
+let deconstructBuilt  = [];
+let tutorialCompleted = false; // New Recruit=false, Returning Engineer=true
+
+/* ════════════════════════════════════════════════════════════════
+   4. STARFIELD
+   ════════════════════════════════════════════════════════════════ */
+(function initStarfield() {
+  const c = document.getElementById('star-canvas');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+  function init() {
+    resize();
+    stars = Array.from({ length: 180 }, () => ({
+      x: Math.random() * c.width, y: Math.random() * c.height,
+      r: Math.random() * 1.2, a: Math.random(), speed: 0.002 + Math.random() * 0.003,
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    const t = Date.now() * 0.001;
+    stars.forEach(s => {
+      const alpha = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(t * s.speed * 60 + s.a * 10));
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,230,255,${alpha})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', init);
+  init(); draw();
+})();
+
+/* ════════════════════════════════════════════════════════════════
+   5. THREE.JS BLOCH SPHERE
+   ════════════════════════════════════════════════════════════════
+   Coordinate mapping (Three.js Y-up):
+     Three.js Y = Bloch Z-axis (|0⟩ north pole = +Y)
+     Three.js X = Bloch X-axis (|+⟩ = +X)
+     Three.js Z = Bloch Y-axis
+   blochToCartesian converts physics (theta,phi) → Three.js Vector3
+   ════════════════════════════════════════════════════════════════ */
+let renderer3, scene3, camera3, sphereGroup3;
+let stateVectorObj, targetDotObj, predictDotObj;
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let animating = false, animFrom = {theta:0,phi:0}, animTo = {theta:0,phi:0}, animT = 0;
+const ANIM_DUR = 0.55;
+let raycaster3, clock3 = { last: 0 };
+
+function initThree() {
+  const canvas = document.getElementById('sphere-canvas');
+  renderer3 = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer3.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer3.setSize(520, 520);
+  renderer3.setClearColor(0x000000, 0);
+
+  scene3  = new THREE.Scene();
+  camera3 = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera3.position.set(2.8, 1.6, 2.8);
+  camera3.lookAt(0, 0, 0);
+
+  raycaster3  = new THREE.Raycaster();
+  sphereGroup3 = new THREE.Group();
+  scene3.add(sphereGroup3);
+
+  // Wireframe sphere (also used for raycasting)
+  const wGeo = new THREE.SphereGeometry(1, 32, 32);
+  const hitMesh = new THREE.Mesh(wGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
+  sphereGroup3.add(hitMesh);
+  const wireMesh = new THREE.Mesh(wGeo,
+    new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.07 }));
+  sphereGroup3.add(wireMesh);
+
+  // Store hit mesh reference for raycasting
+  sphereGroup3.userData.hitMesh = hitMesh;
+
+  // Equator ring
+  const eRing = new THREE.Mesh(new THREE.RingGeometry(0.998, 1.002, 64),
+    new THREE.MeshBasicMaterial({ color: 0x00e5ff, side: THREE.DoubleSide, transparent: true, opacity: 0.25 }));
+  eRing.rotation.x = Math.PI / 2;
+  sphereGroup3.add(eRing);
+
+  // Prime meridian ring
+  sphereGroup3.add(new THREE.Mesh(new THREE.RingGeometry(0.998, 1.002, 64),
+    new THREE.MeshBasicMaterial({ color: 0x00e5ff, side: THREE.DoubleSide, transparent: true, opacity: 0.12 })));
+
+  // Axis lines
+  const axLine = (dir, color) => {
+    const g = new THREE.BufferGeometry().setFromPoints([
+      dir.clone().multiplyScalar(-1.35), dir.clone().multiplyScalar(1.35)]);
+    sphereGroup3.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 })));
+  };
+  axLine(new THREE.Vector3(1,0,0), 0xff6b6b);
+  axLine(new THREE.Vector3(0,1,0), 0x6bff9e);
+  axLine(new THREE.Vector3(0,0,1), 0x6bb8ff);
+
+  // State labels
+  const makeLabel = (text, pos, color) => {
+    const c2 = Object.assign(document.createElement('canvas'), { width: 72, height: 40 });
+    const ctx = c2.getContext('2d');
+    ctx.font = 'bold 22px monospace'; ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, 36, 20);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(c2), transparent: true }));
+    sp.position.copy(pos); sp.scale.set(0.34, 0.19, 1);
+    sphereGroup3.add(sp);
+  };
+  makeLabel('|0⟩', new THREE.Vector3(0,  1.55, 0), '#ffffff');
+  makeLabel('|1⟩', new THREE.Vector3(0, -1.55, 0), '#aaccdd');
+  makeLabel('|+⟩', new THREE.Vector3( 1.55, 0, 0), '#88bbcc');
+  makeLabel('|−⟩', new THREE.Vector3(-1.55, 0, 0), '#88bbcc');
+
+  // State vector (cyan arrow)
+  stateVectorObj = makeArrow3(0x00e5ff, 0.08);
+  sphereGroup3.add(stateVectorObj);
+
+  // Target dot (gold, pulsing)
+  targetDotObj = new THREE.Group();
+  targetDotObj.add(new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xf59e0b })));
+  targetDotObj.add(new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 24),
+    new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })));
+  sphereGroup3.add(targetDotObj);
+
+  // Predict dot (white)
+  predictDotObj = new THREE.Group();
+  predictDotObj.add(new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })));
+  predictDotObj.add(new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })));
+  predictDotObj.visible = false;
+  sphereGroup3.add(predictDotObj);
+
+  // Input handlers
+  // Track whether pointer moved enough to count as a drag (vs a click).
+  // This lets predict mode support BOTH rotation AND click-to-place marker.
+  // If the pointer moves more than DRAG_THRESHOLD px it is a drag; otherwise a click.
+  const DRAG_THRESHOLD = 5;
+  let pointerDownPos = { x: 0, y: 0 };
+  let didDrag = false;
+
+  canvas.addEventListener('mousedown', e => {
+    isDragging    = true;
+    didDrag       = false;
+    pointerDownPos = { x: e.clientX, y: e.clientY };
+    prevMouse     = { x: e.clientX, y: e.clientY };
+  });
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    isDragging     = true;
+    didDrag        = false;
+    pointerDownPos = { x: t.clientX, y: t.clientY };
+    prevMouse      = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+
+  window.addEventListener('mouseup', () => { isDragging = false; });
+  window.addEventListener('touchend', () => { isDragging = false; });
+
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - pointerDownPos.x;
+    const dy = e.clientY - pointerDownPos.y;
+    if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) didDrag = true;
+    handleSphereMove(e.clientX, e.clientY);
+  });
+  window.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    const dx = t.clientX - pointerDownPos.x;
+    const dy = t.clientY - pointerDownPos.y;
+    if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) didDrag = true;
+    handleSphereMove(t.clientX, t.clientY);
+  }, { passive: true });
+
+  // Click fires after mouseup — only treat as a placement click if pointer didn't drag
+  canvas.addEventListener('click', e => {
+    if (!didDrag) handleSphereClick(e);
+    didDrag = false;
+  });
+
+  animateSphere3(0);
+}
+
+/** Reset sphere to default viewing angle — available in all modes */
+function resetSphereView() {
+  sphereGroup3.rotation.set(0, 0, 0);
+}
+
+function makeArrow3(color, headR) {
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.85, 12), mat);
+  body.position.y = 0.425; g.add(body);
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(0, headR, 0.14, 12), mat);
+  head.position.y = 0.92; g.add(head);
+  return g;
+}
+
+function blochToCartesian(theta, phi) {
+  return new THREE.Vector3(
+    Math.sin(theta) * Math.cos(phi),
+    Math.cos(theta),
+    Math.sin(theta) * Math.sin(phi)
+  );
+}
+
+function blochFromXYZ(x, y, z) {
+  const theta = Math.acos(Math.max(-1, Math.min(1, z)));
+  let   phi   = Math.atan2(y, x);
+  if (phi < 0) phi += 2 * PI;
+  return { theta, phi };
+}
+
+function updateStateVector(theta, phi) {
+  stateVectorObj.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0), blochToCartesian(theta, phi));
+}
+
+function updateTargetDot(theta, phi) {
+  if (theta === null) { targetDotObj.visible = false; return; }
+  targetDotObj.visible = true;
+  targetDotObj.position.copy(blochToCartesian(theta, phi));
+  targetDotObj.lookAt(new THREE.Vector3(0, 0, 0));
+}
+
+function updatePredictDot(theta, phi) {
+  if (theta === null) { predictDotObj.visible = false; return; }
+  predictDotObj.visible = true;
+  predictDotObj.position.copy(blochToCartesian(theta, phi));
+  predictDotObj.lookAt(new THREE.Vector3(0, 0, 0));
+}
+
+/** Set the state vector arrow colour — used to dim it in Deconstruct mode */
+function setVectorColor(hexColor) {
+  stateVectorObj.traverse(child => {
+    if (child.material) child.material.color.setHex(hexColor);
+  });
+}
+
+function animateSphere3(time) {
+  requestAnimationFrame(animateSphere3);
+  const now = time || 0;
+  const dt  = Math.min((now - (clock3.last || now)) / 1000, 0.05);
+  clock3.last = now;
+
+  if (!isDragging) sphereGroup3.rotation.y += 0.003;
+
+  if (animating) {
+    animT += dt / ANIM_DUR;
+    if (animT >= 1) { animT = 1; animating = false; }
+    const t     = easeInOut(animT);
+    const theta = lerp(animFrom.theta, animTo.theta, t);
+    const phi   = lerpAngle(animFrom.phi, animTo.phi, t);
+    currentState = { theta, phi };
+    updateStateVector(theta, phi);
+    document.getElementById('current-state').textContent = stateLabel(theta, phi);
+  }
+
+  targetDotObj.scale.setScalar(0.9 + 0.1 * Math.sin(now * 0.003));
+  if (predictDotObj.visible) predictDotObj.scale.setScalar(0.9 + 0.1 * Math.sin(now * 0.003 + 1));
+
+  renderer3.render(scene3, camera3);
+}
+
+const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+const lerp      = (a, b, t) => a + (b - a) * t;
+function lerpAngle(a, b, t) {
+  const diff = ((b - a + 3 * PI) % (2 * PI)) - PI;
+  return a + diff * t;
+}
+
+function animateToState(toTheta, toPhi) {
+  animFrom = { ...currentState };
+  animTo   = { theta: toTheta, phi: toPhi };
+  animT = 0; animating = true;
+}
+
+function stateLabel(theta, phi) {
+  const EPS = 0.2;
+  const p   = ((phi % (2 * PI)) + 2 * PI) % (2 * PI);
+  if (theta < EPS)                              return '|0⟩';
+  if (Math.abs(theta - PI) < EPS)               return '|1⟩';
+  if (Math.abs(theta - PI / 2) < EPS) {
+    if (p < EPS || p > 2 * PI - EPS)            return '|+⟩';
+    if (Math.abs(p - PI) < EPS)                 return '|−⟩';
+    if (Math.abs(p - PI / 2) < EPS)             return '|+i⟩';
+    if (Math.abs(p - 3 * PI / 2) < EPS)         return '|−i⟩';
+  }
+  return '|ψ⟩';
+}
+
+function handleSphereMove(cx, cy) {
+  if (!isDragging) return;
+  sphereGroup3.rotation.y += (cx - prevMouse.x) * 0.012;
+  sphereGroup3.rotation.x += (cy - prevMouse.y) * 0.012;
+  prevMouse = { x: cx, y: cy };
+}
+
+function handleSphereClick(event) {
+  const lvl = LEVELS[currentLevelIdx];
+  if (lvl.type !== LT.PREDICT || predictConfirmed) return;
+
+  const canvas = document.getElementById('sphere-canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const mouse  = new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width)  *  2 - 1,
+    ((event.clientY - rect.top)  / rect.height) * -2 + 1
+  );
+
+  raycaster3.setFromCamera(mouse, camera3);
+
+  // Intersect the visible sphere mesh — Three.js handles world/local transforms
+  // and returns the hit point in world space
+  const hits = raycaster3.intersectObject(sphereGroup3.userData.hitMesh, false);
+  if (!hits.length) return;
+
+  // Transform world-space hit point into sphereGroup3 local space,
+  // then convert to Bloch coordinates.
+  // sphereGroup3 rotates over time so we must use its current transform.
+  const hitLocal = sphereGroup3.worldToLocal(hits[0].point.clone());
+
+  // Three.js local axes map to Bloch physics:
+  //   Three.js Y (up)   = Bloch Z  → cos(theta)
+  //   Three.js X        = Bloch X  → sin(theta)cos(phi)
+  //   Three.js Z        = Bloch Y  → sin(theta)sin(phi)
+  const bloch   = blochFromXYZ(hitLocal.x, hitLocal.z, hitLocal.y);
+  const snapped = snapToNamed(bloch.theta, bloch.phi);
+
+  predictMarkerPos = snapped;
+  updatePredictDot(snapped.theta, snapped.phi);
+
+  const predLabel = document.getElementById('predict-result-label');
+  if (predLabel) predLabel.textContent = stateLabel(snapped.theta, snapped.phi);
+
+  const confirmBtn = document.getElementById('predict-confirm-btn');
+  if (confirmBtn) confirmBtn.disabled = false;
+}
+
+function snapToNamed(theta, phi) {
+  const SNAP = 0.4;
+  const named = [
+    {theta:0, phi:0},
+    {theta:PI, phi:0},
+    {theta:PI/2, phi:0},
+    {theta:PI/2, phi:PI},
+    {theta:PI/2, phi:PI/2},
+    {theta:PI/2, phi:3*PI/2},
+  ];
+  let best = null, bestD = Infinity;
+  for (const n of named) {
+    const d = angularDistance(theta, phi, n.theta, n.phi);
+    if (d < bestD) { bestD = d; best = n; }
+  }
+  return bestD < SNAP ? best : { theta, phi };
+}
+
+function angularDistance(t1, p1, t2, p2) {
+  const v1 = blochToCartesian(t1, p1);
+  const v2 = blochToCartesian(t2, p2);
+  return Math.acos(Math.max(-1, Math.min(1, v1.dot(v2))));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   6. GATE TRANSFORMS
+   ════════════════════════════════════════════════════════════════
+   Physics convention: x=sinθcosφ, y=sinθsinφ, z=cosθ
+   All verified against correct Bloch sphere state mappings.
+   ════════════════════════════════════════════════════════════════ */
+const GATE_TRANSFORMS = {
+  X: (theta, phi) => {
+    const x=Math.sin(theta)*Math.cos(phi), y=Math.sin(theta)*Math.sin(phi), z=Math.cos(theta);
+    return blochFromXYZ(x, -y, -z);
+  },
+  Y: (theta, phi) => {
+    const x=Math.sin(theta)*Math.cos(phi), y=Math.sin(theta)*Math.sin(phi), z=Math.cos(theta);
+    return blochFromXYZ(-x, y, -z);
+  },
+  Z:  (theta, phi) => ({ theta, phi: phi + PI }),
+  H:  (theta, phi) => {
+    const x=Math.sin(theta)*Math.cos(phi), y=Math.sin(theta)*Math.sin(phi), z=Math.cos(theta);
+    return blochFromXYZ(z, y, x);
+  },
+  S:  (theta, phi) => ({ theta, phi: phi + PI / 2 }),
+  T:  (theta, phi) => ({ theta, phi: phi + PI / 4 }),
+};
+
+/* ════════════════════════════════════════════════════════════════
+   7. GATE APPLICATION (Apply + Sandbox modes)
+   ════════════════════════════════════════════════════════════════ */
+function applyGate(gateName) {
+  if (animating) return;
+  const beforeLabel = stateLabel(currentState.theta, currentState.phi);
+  const { theta, phi } = GATE_TRANSFORMS[gateName](currentState.theta, currentState.phi);
+  appliedGates.push(gateName);
+  animateToState(theta, phi);
+  renderAppliedSequence();
+  hideGatePreview();
+  // Show transform label in Tutorial and World 1 only
+  const lvl = LEVELS[currentLevelIdx];
+  if (lvl.world <= 1) {
+    const afterLabel = stateLabel(theta, phi);
+    showTransformLabel(beforeLabel, afterLabel);
+  }
+}
+
+function undoGate() {
+  if (appliedGates.length === 0) { showToast('Nothing to undo'); return; }
+  appliedGates.pop();
+  replayFromStart();
+  renderAppliedSequence();
+}
+
+function resetLevel() {
+  appliedGates = [];
+  const lvl = LEVELS[currentLevelIdx];
+  currentState = { ...lvl.startState };
+  animating = false;
+  updateStateVector(lvl.startState.theta, lvl.startState.phi);
+  document.getElementById('current-state').textContent = lvl.startLabel;
+  renderAppliedSequence();
+}
+
+function replayFromStart() {
+  const lvl = LEVELS[currentLevelIdx];
+  let st = { ...lvl.startState };
+  for (const g of appliedGates) st = GATE_TRANSFORMS[g](st.theta, st.phi);
+  currentState = st;
+  animating = false;
+  updateStateVector(st.theta, st.phi);
+  document.getElementById('current-state').textContent = stateLabel(st.theta, st.phi);
+}
+
+function renderAppliedSequence() {
+  const el = document.getElementById('seq-display');
+  if (!el) return;
+  if (appliedGates.length === 0) {
+    el.innerHTML = '<span class="seq-empty">— no gates applied —</span>';
+  } else {
+    el.innerHTML = appliedGates.map(g => `<span class="seq-chip">${g}</span>`).join(
+      '<span class="seq-arrow"> → </span>');
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   8. PREDICT MODE
+   ════════════════════════════════════════════════════════════════ */
+function clearPrediction() {
+  predictMarkerPos = null;
+  predictDotObj.visible = false;
+  const el = document.getElementById('predict-result-label');
+  if (el) el.textContent = '—';
+  const btn = document.getElementById('predict-confirm-btn');
+  if (btn) btn.disabled = true;
+}
+
+function confirmPrediction() {
+  if (!predictMarkerPos) return;
+  predictConfirmed = true;
+  const confirmBtn = document.getElementById('predict-confirm-btn');
+  const clearBtn   = document.getElementById('predict-clear-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (clearBtn)   clearBtn.disabled  = true;
+
+  const lvl  = LEVELS[currentLevelIdx];
+  const seq  = lvl.predictSequence;
+  // Use the active variant's start state — may differ from lvl.startState on retries
+  let   st   = { ...activePredictVariant(lvl).startState };
+  const steps = [{ ...st }];
+  for (const g of seq) { st = GATE_TRANSFORMS[g](st.theta, st.phi); steps.push({ ...st }); }
+
+  let i = 0;
+  (function step() {
+    if (i < steps.length) {
+      animating = false;
+      currentState = { ...steps[i] };
+      updateStateVector(steps[i].theta, steps[i].phi);
+      document.getElementById('current-state').textContent = stateLabel(steps[i].theta, steps[i].phi);
+      i++; setTimeout(step, 380);
+    } else {
+      evaluatePrediction();
+    }
+  })();
+}
+
+function predictScore(pTheta, pPhi, aTheta, aPhi) {
+  const dist = angularDistance(pTheta, pPhi, aTheta, aPhi);
+  if (dist < 0.2)       return 400;
+  if (dist < PI / 4)    return 250;
+  if (dist < PI / 2)    return 100;
+  return 50;
+}
+
+function evaluatePrediction() {
+  const lvl    = LEVELS[currentLevelIdx];
+  const actual = currentState;
+
+  // Reveal the hidden target row now that the sequence has played out.
+  // Use the active variant's target label — it may differ from the default on retries.
+  const activeVariant = activePredictVariant(lvl);
+  const targetEl = document.getElementById('target-state');
+  if (targetEl) {
+    targetEl.textContent = activeVariant.targetLabel;
+    const row = targetEl.closest('.state-row');
+    if (row) row.style.display = '';
+  }
+  // Place the gold target dot — player can now compare their marker vs actual result
+  if (activeVariant.targetState) updateTargetDot(activeVariant.targetState.theta, activeVariant.targetState.phi);
+
+  const pts = predictScore(predictMarkerPos.theta, predictMarkerPos.phi, actual.theta, actual.phi);
+  const correct  = pts === 400;
+  const passing  = pts >= 250;
+
+  recordScore(currentLevelIdx, pts);
+
+  const predictedLabel = stateLabel(predictMarkerPos.theta, predictMarkerPos.phi);
+  const actualLabel    = stateLabel(actual.theta, actual.phi);
+
+  if (!passing) {
+    // Emphatic fail — below 250 means wrong region entirely
+    document.getElementById('fail-title').textContent = 'Wrong Region';
+    document.getElementById('fail-body').innerHTML =
+      `<strong>Predicted: ${predictedLabel}</strong> &nbsp;→&nbsp; <strong>Actual: ${actualLabel}</strong><br><br>
+       Your prediction was in the wrong region of the sphere. Trace each gate's effect step by step from the starting state.<br><br>
+       +${pts} pts recorded, but this chamber needs a closer prediction to proceed.`;
+    document.getElementById('fail-hint-btn').style.display = 'none';
+    document.getElementById('fail-retry-btn').textContent = 'Try Again';
+    document.getElementById('overlay-fail').classList.add('active');
+    renderMath(document.getElementById('overlay-fail'));
+    return;
+  }
+
+  document.getElementById('success-icon').textContent  = correct ? '★' : '◎';
+  document.getElementById('success-title').textContent = correct ? `Perfect Prediction! +${pts} pts` : `Close! +${pts} pts`;
+  document.getElementById('success-body').innerHTML =
+    `<strong>Predicted: ${predictedLabel}</strong> &nbsp;→&nbsp; <strong>Actual: ${actualLabel}</strong><br><br>
+     ${correct
+       ? `Exact match — you traced the circuit mentally and arrived at the right state.`
+       : `Close — your reasoning was in the right region. Review the final step.`
+     }<br><br>${lvl.successMsg}`;
+
+  document.getElementById('success-retry-btn').style.display = correct ? 'none' : '';
+  wireSuccessBtn(currentLevelIdx);
+  wireConceptBtn(lvl);
+  document.getElementById('overlay-success').classList.add('active');
+  renderMath(document.getElementById('overlay-success'));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   9. DECONSTRUCT MODE
+   ════════════════════════════════════════════════════════════════ */
+function deconApply(g) {
+  deconstructBuilt.push(g);
+  renderDeconSeq();
+}
+
+function deconUndo() {
+  if (!deconstructBuilt.length) { showToast('Nothing to undo'); return; }
+  deconstructBuilt.pop();
+  renderDeconSeq();
+}
+
+function deconReset() {
+  deconstructBuilt = [];
+  renderDeconSeq();
+}
+
+function renderDeconSeq() {
+  const el  = document.getElementById('decon-seq');
+  const lvl = LEVELS[currentLevelIdx];
+  if (!el) return;
+  if (!deconstructBuilt.length) {
+    el.innerHTML = '<span class="seq-empty">— no gates added —</span>'; return;
+  }
+  const chips = deconstructBuilt.map(g => `<span class="seq-chip">${g}</span>`).join(
+    '<span class="seq-arrow"> → </span>');
+  const rem   = lvl.gateCount - deconstructBuilt.length;
+  const hint  = rem > 0
+    ? `<span class="seq-empty" style="margin-left:0.3rem">(${rem} more)</span>`
+    : rem < 0
+    ? `<span style="color:var(--danger);font-size:0.6rem;margin-left:0.3rem">too many</span>`
+    : '';
+  el.innerHTML = chips + hint;
+}
+
+function submitDeconstruct() {
+  const lvl = LEVELS[currentLevelIdx];
+  if (deconstructBuilt.length !== lvl.gateCount) {
+    showToast(`Need exactly ${lvl.gateCount} gate${lvl.gateCount > 1 ? 's' : ''}`);
+    return;
+  }
+
+  // Compute result
+  let st = { ...lvl.startState };
+  for (const g of deconstructBuilt) st = GATE_TRANSFORMS[g](st.theta, st.phi);
+
+  // Animate sequence on sphere (unfreeze for playback)
+  setVectorColor(0x00e5ff); // Restore arrow colour for playback
+  document.getElementById('frozen-badge').style.display = 'none';
+  animating = false;
+  currentState = { ...lvl.startState };
+  updateStateVector(lvl.startState.theta, lvl.startState.phi);
+  document.getElementById('current-state').textContent = lvl.startLabel;
+
+  const steps = [{ ...lvl.startState }];
+  let s2 = { ...lvl.startState };
+  for (const g of deconstructBuilt) { s2 = GATE_TRANSFORMS[g](s2.theta, s2.phi); steps.push({ ...s2 }); }
+
+  let i = 0;
+  (function step() {
+    if (i < steps.length) {
+      animating = false;
+      currentState = { ...steps[i] };
+      updateStateVector(steps[i].theta, steps[i].phi);
+      document.getElementById('current-state').textContent = stateLabel(steps[i].theta, steps[i].phi);
+      i++; setTimeout(step, 380);
+    } else {
+      if (statesMatch(currentState, lvl.targetState)) {
+        recordScore(currentLevelIdx, 400);
+        document.getElementById('success-icon').textContent  = '✦';
+        document.getElementById('success-title').textContent = 'Circuit Found! +400 pts';
+        document.getElementById('success-body').innerHTML =
+          `<strong>Sequence: ${deconstructBuilt.join(' → ')}</strong><br><br>${lvl.successMsg}`;
+        document.getElementById('success-retry-btn').style.display = 'none';
+        wireSuccessBtn(currentLevelIdx);
+        wireConceptBtn(lvl);
+        document.getElementById('overlay-success').classList.add('active');
+        renderMath(document.getElementById('overlay-success'));
+      } else {
+        const got = stateLabel(currentState.theta, currentState.phi);
+        const exp = stateLabel(lvl.targetState.theta, lvl.targetState.phi);
+        document.getElementById('fail-title').textContent = 'Wrong Circuit';
+        document.getElementById('fail-body').innerHTML =
+          `Your sequence reached <strong>${got}</strong>, but the transformation produced <strong>${exp}</strong>.<br><br>
+           Try working backwards from the target — what state must the final gate act on?`;
+        document.getElementById('fail-hint-btn').style.display = 'none';
+        document.getElementById('overlay-fail').classList.add('active');
+        renderMath(document.getElementById('overlay-fail'));
+      }
+    }
+  })();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   10. EVALUATE MODE
+   ════════════════════════════════════════════════════════════════ */
+function submitEvaluate() {
+  const lvl = LEVELS[currentLevelIdx];
+  const q0  = document.querySelector('input[name="eval-q0"]:checked');
+  const q1  = document.querySelector('input[name="eval-q1"]:checked');
+  if (!q0 || !q1) { showToast('Answer both questions first'); return; }
+
+  const a0  = parseInt(q0.value), a1 = parseInt(q1.value);
+  const c0  = lvl.evalQuestions[0].correct, c1 = lvl.evalQuestions[1].correct;
+  const pts = (a0 === c0 ? 200 : 0) + (a1 === c1 ? 200 : 0);
+
+  recordScore(currentLevelIdx, pts);
+
+  // Play Sequence A on sphere
+  animating = false;
+  currentState = { ...lvl.startState };
+  updateStateVector(lvl.startState.theta, lvl.startState.phi);
+
+  const stepsA = [{ ...lvl.startState }];
+  let s = { ...lvl.startState };
+  for (const g of lvl.evalSequences[0].gates) { s = GATE_TRANSFORMS[g](s.theta, s.phi); stepsA.push({ ...s }); }
+
+  let i = 0;
+  (function step() {
+    if (i < stepsA.length) {
+      animating = false; currentState = { ...stepsA[i] };
+      updateStateVector(stepsA[i].theta, stepsA[i].phi);
+      document.getElementById('current-state').textContent = stateLabel(stepsA[i].theta, stepsA[i].phi);
+      i++; setTimeout(step, 350);
+    } else {
+      setTimeout(() => showEvalResult(lvl, pts, a0===c0, a1===c1), 500);
+    }
+  })();
+}
+
+function showEvalResult(lvl, pts, q0ok, q1ok) {
+  document.getElementById('success-icon').textContent  = pts === 400 ? '★' : pts === 200 ? '◎' : '○';
+  document.getElementById('success-title').textContent = `Evaluation: ${pts} / 400 pts`;
+  document.getElementById('success-body').innerHTML =
+    `${q0ok ? '✓' : '✗'} ${q0ok
+       ? 'Correct — Sequence A (Z→H) reaches $|1\\rangle$.'
+       : 'Incorrect — Sequence A (Z→H) reaches $|1\\rangle$, not B.'
+     }<br>
+     ${q1ok ? '✓' : '✗'} ${q1ok
+       ? 'Correct — H mapped $|{+}\\rangle$ to $|0\\rangle$ before Z could act.'
+       : 'Incorrect — H returned $|{+}\\rangle$ to $|0\\rangle$ first ($H^2=I$), then Z did nothing at the pole.'
+     }<br><br>${lvl.successMsg}`;
+  document.getElementById('success-retry-btn').style.display = pts < 400 ? '' : 'none';
+  wireSuccessBtn(currentLevelIdx);
+  wireConceptBtn(lvl);
+  document.getElementById('overlay-success').classList.add('active');
+  renderMath(document.getElementById('overlay-success'));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   11. SANDBOX MODE
+   ════════════════════════════════════════════════════════════════ */
+function completeSandbox() {
+  levelCompleted[currentLevelIdx] = true;
+  tutorialCompleted = true; // Unlock mission worlds
+  showWorldComplete();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   12. SOLUTION CHECKING — APPLY MODE
+   ════════════════════════════════════════════════════════════════ */
+function statesMatch(s1, s2) {
+  if (!s2) return false;
+  const EPS = 0.18;
+  if (s2.theta < 0.2 || s2.theta > PI - 0.2) {
+    return Math.abs(s1.theta - s2.theta) < EPS;
+  }
+  let phiDiff = Math.abs(s1.phi - s2.phi) % (2 * PI);
+  if (phiDiff > PI) phiDiff = 2 * PI - phiDiff;
+  return Math.abs(s1.theta - s2.theta) < EPS && phiDiff < EPS + 0.1;
+}
+
+function recordScore(idx, pts) {
+  const old = levelBestScores[idx] || 0;
+  if (pts > old) {
+    totalScore = totalScore - old + pts;
+    levelBestScores[idx] = pts;
+    document.getElementById('hud-score').textContent = totalScore;
+  }
+  levelCompleted[idx] = true;
+}
+
+function checkSolution() {
+  const lvl = LEVELS[currentLevelIdx];
+  if (lvl.type !== LT.APPLY && lvl.type !== LT.SANDBOX) return;
+
+  if (statesMatch(currentState, lvl.targetState)) {
+    const optimal    = OPTIMAL_GATES[currentLevelIdx];
+    const extraGates = Math.max(0, appliedGates.length - optimal);
+    const gateBonus  = Math.max(0, 200 - extraGates * 50);
+    const pts        = 200 + gateBonus;
+    const isPerfect  = pts === 400;
+
+    recordScore(currentLevelIdx, pts);
+
+    const breakdown = `Base: 200 · Gate bonus: +${gateBonus}${
+      extraGates > 0 ? ` (${extraGates} extra gate${extraGates>1?'s':''})` : ' (optimal)'}`;
+
+    document.getElementById('success-icon').textContent  = isPerfect ? '★' : '○';
+    document.getElementById('success-title').textContent = isPerfect
+      ? `Perfect Run! +${pts} pts`
+      : `Level Complete — ${pts} / 400 pts`;
+
+    document.getElementById('success-body').innerHTML = isPerfect
+      ? `<strong>${appliedGates.join(' → ')}</strong><br>
+         <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--muted)">${breakdown} · Total: ${pts} / 400</span><br><br>${lvl.successMsg}`
+      : `<strong>${appliedGates.join(' → ')}</strong><br>
+         <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--muted)">${breakdown} · Total: ${pts} / 400</span><br>
+         <span style="color:var(--gold)">This chamber can be solved in ${optimal} gate${optimal>1?'s':''} — retry for the full 400 pts, or move on.</span>`;
+
+    document.getElementById('success-retry-btn').style.display = isPerfect ? 'none' : '';
+    wireSuccessBtn(currentLevelIdx);
+    wireConceptBtn(lvl);
+    document.getElementById('overlay-success').classList.add('active');
+    renderMath(document.getElementById('overlay-success'));
+
+  } else {
+    const expected = stateLabel(lvl.targetState.theta, lvl.targetState.phi);
+    const got      = stateLabel(currentState.theta, currentState.phi);
+    document.getElementById('fail-title').textContent = 'Wrong State';
+    document.getElementById('fail-body').innerHTML =
+      `You reached <strong>${got}</strong>, but the chamber needs <strong>${expected}</strong>.<br><br>
+       Try a different sequence — the sphere shows you exactly what each gate does.`;
+    document.getElementById('fail-hint-btn').style.display = '';
+    document.getElementById('fail-retry-btn').textContent  = 'Try Again';
+    document.getElementById('overlay-fail').classList.add('active');
+    renderMath(document.getElementById('overlay-fail'));
+  }
+}
+
+function wireConceptBtn(lvl) {
+  const readBtn      = document.getElementById('success-read-btn');
+  const conceptPanel = document.getElementById('success-concept-panel');
+  conceptPanel.innerHTML = ''; conceptPanel.style.display = 'none';
+  if (lvl.concept && lvl.concept.trim()) {
+    // Tutorial + New Recruit: auto-expand concept, hide the button
+    if (!tutorialCompleted && lvl.world === 0) {
+      readBtn.style.display = 'none';
+      conceptPanel.innerHTML = lvl.concept;
+      conceptPanel.style.display = 'block';
+      renderMath(conceptPanel);
+    } else {
+      readBtn.style.display = '';
+      readBtn.onclick = () => {
+        conceptPanel.innerHTML = lvl.concept;
+        conceptPanel.style.display = 'block';
+        readBtn.style.display = 'none';
+        renderMath(conceptPanel);
+      };
+    }
+  } else {
+    readBtn.style.display = 'none';
+  }
+}
+
+function wireSuccessBtn(idx) {
+  const world         = WORLDS.find(w => idx >= w.levelRange[0] && idx <= w.levelRange[1]);
+  const worldComplete = worldFullyCompleted(world);
+  const isLast        = idx === LEVELS.length - 1;
+  const btn           = document.getElementById('success-primary-btn');
+
+  if (worldComplete) {
+    btn.textContent = isLast ? 'Complete! →' : `World ${world.num} Complete →`;
+    btn.onclick     = () => { closeOverlay('overlay-success'); showWorldComplete(); };
+  } else if (idx === world.levelRange[1]) {
+    btn.textContent = '⊞ Return to Map';
+    btn.onclick     = () => { closeOverlay('overlay-success'); openMap('game'); };
+  } else {
+    btn.textContent = 'Next Level →';
+    btn.onclick     = () => { closeOverlay('overlay-success'); nextLevel(); };
+  }
+
+  // Tutorial New Recruit: delay the Next button so concept is read
+  const lvl = LEVELS[idx];
+  if (!tutorialCompleted && lvl.world === 0 && lvl.concept) {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    setTimeout(() => { btn.disabled = false; btn.style.opacity = '1'; }, 2500);
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+
+function retryFromSuccess() { closeOverlay('overlay-success'); retryLevel(); }
+
+function retryLevel() {
+  closeOverlay('overlay-fail');
+  const lvl = LEVELS[currentLevelIdx];
+  appliedGates     = [];
+  deconstructBuilt = [];
+  predictMarkerPos = null;
+  predictConfirmed = false;
+  animating        = false;
+
+  // For predict levels with multiple variants, pick a different one so
+  // memorising the previous answer gives no advantage on retry.
+  if (lvl.type === LT.PREDICT && lvl.predictVariants && lvl.predictVariants.length > 1) {
+    const prev = currentPredictVariant;
+    do {
+      currentPredictVariant = Math.floor(Math.random() * lvl.predictVariants.length);
+    } while (currentPredictVariant === prev);
+    // Update mission brief to reflect new start state
+    document.getElementById('mission-text').innerHTML = buildPredictMission(lvl);
+    renderMath(document.getElementById('mission-text'));
+  }
+
+  // Determine start state — variant or default
+  const activeStart      = lvl.type === LT.PREDICT ? activePredictVariant(lvl).startState : lvl.startState;
+  const activeStartLabel = lvl.type === LT.PREDICT ? activePredictVariant(lvl).startLabel : lvl.startLabel;
+
+  currentState = { ...activeStart };
+  predictDotObj.visible = false;
+  updateStateVector(activeStart.theta, activeStart.phi);
+  document.getElementById('current-state').textContent = activeStartLabel;
+
+  // Re-hide target for predict levels (was revealed during evaluatePrediction)
+  if (lvl.type === LT.PREDICT) {
+    updateTargetDot(null, null);
+    const targetEl = document.getElementById('target-state');
+    if (targetEl) {
+      const row = targetEl.closest('.state-row');
+      if (row) row.style.display = 'none';
+    }
+  } else if (lvl.targetState) {
+    updateTargetDot(lvl.targetState.theta, lvl.targetState.phi);
+  }
+
+  // Frozen badge and arrow dimming — visible only in Deconstruct mode
+  const frozenBadge = document.getElementById('frozen-badge');
+  if (frozenBadge) frozenBadge.style.display = lvl.type === LT.DECONSTRUCT ? '' : 'none';
+  if (typeof setVectorColor === 'function') {
+    setVectorColor(lvl.type === LT.DECONSTRUCT ? 0x607080 : 0x00e5ff);
+  }
+
+  // Hide transform label
+  const tLabel = document.getElementById('transform-label');
+  if (tLabel) tLabel.classList.remove('visible');
+
+  initActionZone(lvl);
+}
+
+function showHint() {
+  const lvl = LEVELS[currentLevelIdx];
+  closeOverlay('overlay-fail');
+  showToast(`Hint: Try the ${lvl.solution[0]} gate first`);
+}
+
+function closeOverlay(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ════════════════════════════════════════════════════════════════
+   13. WORLD PROGRESSION
+   ════════════════════════════════════════════════════════════════ */
+function worldFullyCompleted(world) {
+  for (let i = world.levelRange[0]; i <= world.levelRange[1]; i++) {
+    if (!levelCompleted[i]) return false;
+  }
+  return true;
+}
+
+function skippedInWorld(world) {
+  const s = [];
+  for (let i = world.levelRange[0]; i <= world.levelRange[1]; i++) {
+    if (!levelCompleted[i]) s.push(LEVELS[i]);
+  }
+  return s;
+}
+
+function nextLevel() {
+  currentLevelIdx++;
+  appliedGates = []; deconstructBuilt = [];
+  predictMarkerPos = null; predictConfirmed = false;
+  loadLevel(currentLevelIdx);
+}
+
+function showWorldComplete() {
+  const world    = WORLDS.find(w => currentLevelIdx >= w.levelRange[0] && currentLevelIdx <= w.levelRange[1]);
+  const skipped  = skippedInWorld(world);
+  const done     = (world.levelRange[1] - world.levelRange[0] + 1) - skipped.length;
+  const isLast   = world.num === WORLDS[WORLDS.length - 1].num;
+
+  document.getElementById('complete-title').textContent = world.completedTitle;
+  document.getElementById('complete-sub').innerHTML = world.completedStory +
+    (skipped.length > 0
+      ? `<br><br><span style="color:var(--gold)">⚠ ${skipped.length} chamber${skipped.length>1?'s':''} still unsolved: ${skipped.map(l=>l.title).join(', ')}.</span>`
+      : '');
+  document.getElementById('final-score').textContent  = totalScore;
+  document.getElementById('final-levels').textContent = done;
+
+  const p = document.getElementById('complete-primary-btn');
+  const s = document.getElementById('complete-secondary-btn');
+  const t = document.getElementById('complete-tertiary-btn');
+
+  if (isLast) {
+    p.textContent = '⊞ World Map'; p.style.cssText = '';
+    p.onclick = () => { showScreen('screen-game'); openMap('game'); };
+    s.textContent = '▶ New Mission'; s.onclick = startGame;
+    s.style.cssText = 'border-color:var(--muted);color:var(--muted)';
+    t.textContent = '⌂ Main Menu'; t.onclick = goToMainMenu;
+    t.style.cssText = 'border-color:var(--muted);color:var(--muted)';
+  } else {
+    const next = WORLDS.find(w => w.num === world.num + 1);
+    p.textContent = `World ${next.num} →`; p.style.cssText = '';
+    p.onclick = () => { showScreen('screen-game'); currentLevelIdx = next.levelRange[0]; loadLevel(currentLevelIdx); };
+    s.textContent = '⊞ World Map'; s.onclick = () => { showScreen('screen-game'); openMap('game'); };
+    s.style.cssText = 'border-color:var(--muted);color:var(--muted)';
+    t.textContent = '⌂ Main Menu'; t.onclick = goToMainMenu;
+    t.style.cssText = 'border-color:var(--muted);color:var(--muted)';
+  }
+  showScreen('screen-complete');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   14. LEVEL LOADING
+   ════════════════════════════════════════════════════════════════ */
+const GATE_ORDER = ['X','Y','Z','H','S','T'];
+
+function loadLevel(idx) {
+  const lvl   = LEVELS[idx];
+  const world = WORLDS.find(w => idx >= w.levelRange[0] && idx <= w.levelRange[1]);
+
+  // Header
+  document.getElementById('level-tag').textContent   = lvl.tag;
+  document.getElementById('level-title').textContent = lvl.title;
+  const badge = document.getElementById('type-badge');
+  badge.className   = `type-badge ${lvl.type}`;
+  badge.textContent = lvl.type.charAt(0).toUpperCase() + lvl.type.slice(1);
+
+  // HUD
+  document.getElementById('hud-level').textContent  = lvl.id;
+  document.getElementById('world-name').textContent = `${world.num} — ${world.name.toUpperCase()}`;
+
+  // For predict levels, reset to variant 0 on fresh load and build dynamic brief
+  if (lvl.type === LT.PREDICT) currentPredictVariant = 0;
+
+  // Mission brief — predict levels use a dynamic brief that names the active start state
+  const missionHTML = lvl.type === LT.PREDICT ? buildPredictMission(lvl) : lvl.mission;
+  document.getElementById('mission-text').innerHTML = missionHTML;
+  renderMath(document.getElementById('mission-text'));
+  const sdEl = document.getElementById('state-display');
+  // SANDBOX: hide entirely. PREDICT: hide target row — revealing it would give away the answer.
+  // The target is revealed after the player confirms their prediction.
+  if (lvl.type === LT.SANDBOX || lvl.type === LT.PREDICT) {
+    sdEl.style.display = lvl.type === LT.SANDBOX ? 'none' : '';
+    // For predict: show state display but hide just the TARGET row
+    const targetRow = document.getElementById('target-state');
+    if (targetRow) {
+      const row = targetRow.closest('.state-row');
+      if (row) row.style.display = lvl.type === LT.PREDICT ? 'none' : '';
+    }
+  } else {
+    sdEl.style.display = '';
+    if (lvl.targetLabel) document.getElementById('target-state').textContent = lvl.targetLabel;
+  }
+
+  // Concept
+  document.getElementById('concept-text').innerHTML = lvl.concept || '';
+  setConcept(false);
+
+  // Sphere labels
+  const labEl = document.getElementById('sphere-labels');
+  if (lvl.type === LT.PREDICT) {
+    labEl.innerHTML = `
+      <div class="sphere-label"><div class="dot dot-current"></div> Start state</div>
+      <div class="sphere-label" style="display:flex;align-items:center;gap:0.5rem">
+        <span><span style="color:var(--type-predict)">Click</span> to place &nbsp;·&nbsp; <span style="color:var(--accent)">↻ drag</span> to rotate</span>
+        <button class="btn-view-reset" onclick="resetSphereView()">⟳ Reset View</button>
+      </div>
+      <div class="sphere-label"><div class="dot dot-predict"></div> Your prediction</div>`;
+  } else if (lvl.type === LT.SANDBOX) {
+    labEl.innerHTML = `
+      <div class="sphere-label"><div class="dot dot-current"></div> Current state</div>
+      <div class="sphere-label" style="display:flex;align-items:center;gap:0.5rem">
+        <span>Bloch Sphere <span style="color:var(--accent)">↻ drag</span></span>
+        <button class="btn-view-reset" onclick="resetSphereView()">⟳ Reset View</button>
+      </div>
+      <div class="sphere-label" style="visibility:hidden"></div>`;
+  } else {
+    labEl.innerHTML = `
+      <div class="sphere-label"><div class="dot dot-current"></div> Current state</div>
+      <div class="sphere-label" style="display:flex;align-items:center;gap:0.5rem">
+        <span>Bloch Sphere <span style="color:var(--accent)">↻ drag</span></span>
+        <button class="btn-view-reset" onclick="resetSphereView()">⟳ Reset View</button>
+      </div>
+      <div class="sphere-label"><div class="dot dot-target"></div> Target state</div>`;
+  }
+
+  // Progress dots
+  const prog = document.getElementById('world-progress');
+  prog.innerHTML = '';
+  LEVELS.forEach((l, i) => {
+    if (i > 0) {
+      const pw = WORLDS.find(w => (i-1) >= w.levelRange[0] && (i-1) <= w.levelRange[1]);
+      const cw = WORLDS.find(w => i >= w.levelRange[0] && i <= w.levelRange[1]);
+      if (cw.num !== pw.num) {
+        const sep = document.createElement('div'); sep.className = 'wp-sep'; prog.appendChild(sep);
+      }
+    }
+    const d = document.createElement('div');
+    d.className = 'wp-dot' + (i === idx ? ' active' : levelCompleted[i] ? ' done' : '');
+    d.title     = `${l.id}: ${l.title}`;
+    prog.appendChild(d);
+  });
+
+  // Reset state
+  appliedGates     = [];
+  deconstructBuilt = [];
+  predictMarkerPos = null;
+  predictConfirmed = false;
+  animating        = false;
+  predictDotObj.visible = false;
+
+  // Reset sphere to default viewing angle on every level load
+  // so the player always starts with the same orientation
+  if (typeof sphereGroup3 !== 'undefined') sphereGroup3.rotation.set(0, 0, 0);
+
+  // For predict levels, use the active variant's start state
+  const activeStart = lvl.type === LT.PREDICT
+    ? activePredictVariant(lvl).startState
+    : lvl.startState;
+  const activeStartLabel = lvl.type === LT.PREDICT
+    ? activePredictVariant(lvl).startLabel
+    : lvl.startLabel;
+
+  currentState = { ...activeStart };
+  updateStateVector(activeStart.theta, activeStart.phi);
+  document.getElementById('current-state').textContent = activeStartLabel;
+  // PREDICT: hide target dot — it would reveal the answer before the player predicts
+  if (lvl.type === LT.PREDICT) {
+    updateTargetDot(null, null);
+  } else if (lvl.targetState) {
+    updateTargetDot(lvl.targetState.theta, lvl.targetState.phi);
+  } else {
+    updateTargetDot(null, null);
+  }
+
+  // Reset success modal concept panel
+  document.getElementById('success-concept-panel').style.display = 'none';
+  document.getElementById('success-read-btn').style.display      = 'none';
+
+  // Cursor
+  const canvas = document.getElementById('sphere-canvas');
+  canvas.className = lvl.type === LT.PREDICT ? '' : 'drag-cursor';
+
+  // Frozen badge and arrow dimming for Deconstruct mode
+  const fb = document.getElementById('frozen-badge');
+  if (fb) fb.style.display = lvl.type === LT.DECONSTRUCT ? '' : 'none';
+  if (typeof setVectorColor === 'function') {
+    setVectorColor(lvl.type === LT.DECONSTRUCT ? 0x607080 : 0x00e5ff);
+  }
+
+  // Hide transform label from previous level
+  const tl = document.getElementById('transform-label');
+  if (tl) tl.classList.remove('visible');
+
+  // Gate introduction cards (New Recruit tutorial only)
+  if (!tutorialCompleted && lvl.world === 0 && lvl.availableGates) {
+    const newGates = lvl.availableGates.filter(g => !gatesIntroduced[g]);
+    if (newGates.length > 0) {
+      let gi = 0;
+      function showNextCard() {
+        if (gi < newGates.length) {
+          gatesIntroduced[newGates[gi]] = true;
+          showGateCard(newGates[gi], () => { gi++; showNextCard(); });
+        }
+      }
+      setTimeout(showNextCard, 400);
+    }
+  }
+
+  initActionZone(lvl);
+}
+
+/**
+ * Return the active start/target pair for a predict level.
+ * If the level has predictVariants, returns the variant at currentPredictVariant.
+ * Otherwise returns the level's own startState/targetState directly.
+ */
+function activePredictVariant(lvl) {
+  if (!lvl.predictVariants) return lvl;
+  return lvl.predictVariants[currentPredictVariant];
+}
+
+/**
+ * Build a dynamic mission brief for a predict level, inserting the
+ * active variant's start state label so the brief is always accurate
+ * even when a different variant is loaded on retry.
+ */
+function buildPredictMission(lvl) {
+  const v   = activePredictVariant(lvl);
+  const seq = lvl.predictSequence.join('→');
+  // Strip | and ⟩ from the label to embed cleanly in LaTeX $|...\rangle$
+  const raw = v.startLabel.replace(/[|⟩]/g, '');
+  return `The sequence ${seq} has been applied to this chamber starting from $|{${raw}}\\rangle$. Click the sphere where you think the qubit will land, then confirm.`;
+}
+
+function initActionZone(lvl) {
+  const zone = document.getElementById('action-zone');
+
+  if (lvl.type === LT.APPLY) {
+    zone.innerHTML = `
+      <div>
+        <div class="section-label">// Available Gates</div>
+        <div class="gates-grid" id="gates-grid"></div>
+      </div>
+      <div>
+        <div class="section-label">// Applied Sequence</div>
+        <div class="sequence-display" id="seq-display">
+          <span class="seq-empty">— no gates applied —</span>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn-sm" onclick="undoGate()">↩ Undo</button>
+        <button class="btn-sm danger" onclick="resetLevel()">⟳ Reset</button>
+        <button class="btn-sm primary" onclick="checkSolution()">▶ Check</button>
+      </div>`;
+    buildGateGrid('gates-grid', lvl.availableGates, g => applyGate(g));
+
+    // T1 only: pulse the left panel to draw the player's eye to the action area
+    // (Addresses feedback that the left panel was not noticed for 40+ seconds)
+    if (lvl.id === 'T1') {
+      const panel = document.getElementById('panel-left');
+      panel.classList.add('panel-attention');
+      // Remove pulse after first gate click — player has found the panel
+      const removeAttention = () => {
+        panel.classList.remove('panel-attention');
+        document.getElementById('gates-grid').removeEventListener('click', removeAttention);
+      };
+      setTimeout(() => {
+        const grid = document.getElementById('gates-grid');
+        if (grid) grid.addEventListener('click', removeAttention);
+      }, 100);
+    }
+
+  } else if (lvl.type === LT.PREDICT) {
+    const chips = lvl.predictSequence.map(g =>
+      `<span class="seq-chip readonly">${g}</span>`).join('<span class="seq-arrow"> → </span>');
+    zone.innerHTML = `
+      <div>
+        <div class="section-label">// Sequence to Predict</div>
+        <div class="sequence-display">${chips}</div>
+      </div>
+      <div class="predict-panel">
+        <div class="predict-instruction">Click the sphere to place your prediction marker. It will snap to the nearest named state.</div>
+        <div class="section-label" style="margin-top:0.5rem">// Predicted State</div>
+        <div class="predict-result" id="predict-result-label">—</div>
+        <div class="predict-actions">
+          <button class="btn-sm" id="predict-clear-btn" onclick="clearPrediction()">✕ Clear</button>
+          <button class="btn-sm primary" id="predict-confirm-btn" onclick="confirmPrediction()" disabled>✓ Confirm →</button>
+        </div>
+      </div>`;
+
+  } else if (lvl.type === LT.DECONSTRUCT) {
+    animating = false;
+    updateStateVector(lvl.startState.theta, lvl.startState.phi);
+    if (lvl.targetState) updateTargetDot(lvl.targetState.theta, lvl.targetState.phi);
+
+    zone.innerHTML = `
+      <div class="reading-zone" style="background:rgba(245,158,11,0.04);border-color:rgba(245,158,11,0.2)">
+        <div class="zone-label" style="color:var(--type-deconstruct)">// Transform Info</div>
+        <div style="font-size:0.78rem;color:#9bbfce;margin-top:0.25rem">
+          ${lvl.startLabel} → ${lvl.targetLabel}
+          <span style="color:var(--type-deconstruct);margin-left:0.4rem">· ${lvl.gateCount} gate${lvl.gateCount>1?'s':''} used</span>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">// Build Circuit</div>
+        <div class="gates-grid" id="gates-grid"></div>
+      </div>
+      <div>
+        <div class="section-label">// Your Sequence</div>
+        <div class="sequence-display" id="decon-seq">
+          <span class="seq-empty">— no gates added —</span>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn-sm" onclick="deconUndo()">↩ Undo</button>
+        <button class="btn-sm danger" onclick="deconReset()">⟳ Reset</button>
+        <button class="btn-sm primary" onclick="submitDeconstruct()">▶ Submit</button>
+      </div>`;
+    buildGateGrid('gates-grid', lvl.availableGates, g => deconApply(g));
+
+  } else if (lvl.type === LT.EVALUATE) {
+    const seqA  = lvl.evalSequences[0];
+    const seqB  = lvl.evalSequences[1];
+    const cA    = seqA.gates.map(g => `<span class="seq-chip readonly">${g}</span>`).join('<span class="seq-arrow"> → </span>');
+    const cB    = seqB.gates.map(g => `<span class="seq-chip readonly">${g}</span>`).join('<span class="seq-arrow"> → </span>');
+    const q0opt = lvl.evalQuestions[0].options.map((o,i) =>
+      `<label class="eval-option"><input type="radio" name="eval-q0" value="${i}"><span>${o}</span></label>`).join('');
+    const q1opt = lvl.evalQuestions[1].options.map((o,i) =>
+      `<label class="eval-option"><input type="radio" name="eval-q1" value="${i}"><span>${o}</span></label>`).join('');
+
+    zone.innerHTML = `
+      <div class="evaluate-panel">
+        <div>
+          <div class="section-label">// Compare Sequences</div>
+          <div class="seq-compare">
+            <div class="seq-block"><div class="seq-block-label">SEQ A</div><div class="seq-block-chips">${cA}</div></div>
+            <div class="seq-block"><div class="seq-block-label">SEQ B</div><div class="seq-block-chips">${cB}</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="eval-question">${lvl.evalQuestions[0].text}</div>
+          <div class="eval-options">${q0opt}</div>
+        </div>
+        <div>
+          <div class="eval-question">${lvl.evalQuestions[1].text}</div>
+          <div class="eval-options">${q1opt}</div>
+        </div>
+        <button class="btn-sm primary" style="width:100%;padding:0.6rem;margin-top:0.25rem" onclick="submitEvaluate()">▶ Submit Evaluation</button>
+      </div>`;
+    renderMath(zone);
+
+  } else if (lvl.type === LT.SANDBOX) {
+    zone.innerHTML = `
+      <div>
+        <div class="section-label">// Gates</div>
+        <div class="gates-grid" id="gates-grid"></div>
+      </div>
+      <div>
+        <div class="section-label">// Applied</div>
+        <div class="sequence-display" id="seq-display">
+          <span class="seq-empty">— explore freely —</span>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn-sm" onclick="undoGate()">↩ Undo</button>
+        <button class="btn-sm danger" onclick="resetLevel()">⟳ Reset</button>
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:0.5rem;padding:0.85rem;font-size:0.8rem" onclick="completeSandbox()">Begin Mission →</button>`;
+    buildGateGrid('gates-grid', lvl.availableGates, g => { applyGate(g); renderAppliedSequence(); });
+  }
+}
+
+function buildGateGrid(containerId, available, onClick) {
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  const lvl = LEVELS[currentLevelIdx];
+  const showPreview = lvl.world <= 1 && (lvl.type === LT.APPLY || lvl.type === LT.SANDBOX);
+  GATE_ORDER.forEach(g => {
+    const btn      = document.createElement('button');
+    btn.className  = 'gate-btn';
+    btn.textContent = g;
+    const unlocked = available.includes(g);
+    btn.disabled   = !unlocked;
+    if (unlocked) {
+      btn.addEventListener('click',      () => onClick(g));
+      btn.addEventListener('mouseenter', () => {
+        showGateTooltip(g);
+        if (showPreview) showGatePreview(g);
+      });
+      btn.addEventListener('mouseleave', () => {
+        hideGateTooltip();
+        if (showPreview) hideGatePreview();
+      });
+    }
+    grid.appendChild(btn);
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   15. CONCEPT BOX
+   ════════════════════════════════════════════════════════════════ */
+function setConcept(open) {
+  document.getElementById('concept-text').style.display = open ? 'block' : 'none';
+  document.getElementById('concept-chevron').classList.toggle('open', open);
+}
+function toggleConcept() {
+  const body    = document.getElementById('concept-text');
+  const opening = body.style.display !== 'block';
+  setConcept(opening);
+  if (opening) renderMath(body);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   16. SCORING HELPERS
+   ════════════════════════════════════════════════════════════════ */
+function levelMaxScore(idx) {
+  return LEVELS[idx].type === LT.SANDBOX ? 0 : 400;
+}
+function worldMaxScore(world) {
+  let t = 0;
+  for (let i = world.levelRange[0]; i <= world.levelRange[1]; i++) t += levelMaxScore(i);
+  return t;
+}
+function worldEarnedScore(world) {
+  let t = 0;
+  for (let i = world.levelRange[0]; i <= world.levelRange[1]; i++) t += levelBestScores[i] || 0;
+  return t;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   17. MISSION MAP
+   ════════════════════════════════════════════════════════════════ */
+const TYPE_LABEL = {
+  apply:'APPLY', predict:'PREDICT', deconstruct:'DCON',
+  evaluate:'EVAL', sandbox:'FREE'
+};
+let mapCalledFrom = 'title';
+
+function openMap(from) {
+  mapCalledFrom = from;
+  renderMap();
+  document.getElementById('overlay-map').classList.add('active');
+}
+function closeMap() {
+  document.getElementById('overlay-map').classList.remove('active');
+}
+
+function renderMap() {
+  const container = document.getElementById('map-content');
+  container.innerHTML = '';
+
+  WORLDS.forEach(world => {
+    const earned = worldEarnedScore(world);
+    const max    = worldMaxScore(world);
+    const pct    = max > 0 ? Math.round((earned / max) * 100) : 0;
+    const locked = !tutorialCompleted && world.num > 0;
+
+    const worldDiv  = document.createElement('div');
+    worldDiv.className = 'map-world';
+
+    const header = document.createElement('div');
+    header.className = `map-world-label ${world.colorClass}`;
+    const scoreText = locked ? '<span class="map-world-score" style="color:var(--muted)">🔒 Complete tutorial first</span>'
+      : max > 0 ? `<span class="map-world-score">${earned.toLocaleString()} / ${max.toLocaleString()} pts (${pct}%)</span>`
+      : '<span class="map-world-score">No scoring</span>';
+    header.innerHTML = `${world.mapName}${scoreText}`;
+    worldDiv.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'map-levels' + (world.num === 0 ? ' tut' : '');
+    if (locked) grid.style.opacity = '0.35';
+    if (locked) grid.style.pointerEvents = 'none';
+
+    for (let li = world.levelRange[0]; li <= world.levelRange[1]; li++) {
+      const lvl       = LEVELS[li];
+      const isCurrent = li === currentLevelIdx && mapCalledFrom === 'game';
+      const isDone    = !!levelCompleted[li];
+      const best      = levelBestScores[li] || 0;
+      const maxPts    = levelMaxScore(li);
+      const barPct    = maxPts > 0 && best > 0 ? Math.round((best / maxPts) * 100) : 0;
+      const barColor  = barPct >= 90 ? 'var(--success)' : barPct >= 60 ? 'var(--gold)' : 'var(--accent)';
+      const typeColors = { apply:'var(--type-apply)', predict:'var(--type-predict)',
+        deconstruct:'var(--type-deconstruct)', evaluate:'var(--type-evaluate)', sandbox:'var(--type-sandbox)' };
+
+      const gateChips = (lvl.availableGates && lvl.type !== LT.SANDBOX && lvl.type !== LT.EVALUATE)
+        ? [...lvl.availableGates]
+            .sort((a,b) => GATE_ORDER.indexOf(a) - GATE_ORDER.indexOf(b))
+            .map(g => `<span class="map-gate-chip">${g}</span>`).join('')
+        : '';
+
+      const card = document.createElement('div');
+      card.className = 'map-level-card' + (isCurrent ? ' current' : '') + (isDone ? ' completed' : '');
+      card.innerHTML = `
+        <div class="map-level-num">
+          <span>${lvl.id}</span>
+          <span style="color:${typeColors[lvl.type]};font-size:0.5rem;letter-spacing:0.06em">${TYPE_LABEL[lvl.type]}</span>
+        </div>
+        <div class="map-level-title">${lvl.title}</div>
+        ${gateChips ? `<div class="map-level-gates">${gateChips}</div>` : ''}
+        <div class="map-level-score ${best?'':'empty'}">
+          ${maxPts > 0 ? (best ? `★ ${best} / ${maxPts} pts` : '— not played') : '— tutorial —'}
+        </div>
+        ${barPct > 0 ? `<div class="map-score-bar-bg"><div class="map-score-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>` : ''}`;
+      card.addEventListener('click', () => jumpToLevel(li));
+      grid.appendChild(card);
+    }
+
+    worldDiv.appendChild(grid);
+    container.appendChild(worldDiv);
+  });
+}
+
+function jumpToLevel(idx) {
+  closeMap();
+  showScreen('screen-game');
+  if (!renderer3) initThree();
+
+  if (mapCalledFrom === 'title') {
+    totalScore = 0;
+    [levelBestScores, levelCompleted].forEach(o => Object.keys(o).forEach(k => delete o[k]));
+  }
+
+  currentLevelIdx = idx;
+  appliedGates = []; deconstructBuilt = [];
+  predictMarkerPos = null; predictConfirmed = false;
+  loadLevel(idx);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   18. GATE TOOLTIPS
+   ════════════════════════════════════════════════════════════════ */
+const GATE_INFO = {
+  X: { name:'X Gate (Pauli-X)',  desc:'Quantum NOT. Maps $|0\\rangle \\leftrightarrow |1\\rangle$. 180° rotation around X axis.',
+       matrix:'$X = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$' },
+  Y: { name:'Y Gate (Pauli-Y)',  desc:'Maps $|0\\rangle \\leftrightarrow |1\\rangle$ and $|{+}\\rangle \\leftrightarrow |{-}\\rangle$. 180° around Y axis.',
+       matrix:'$Y = \\begin{pmatrix} 0 & -i \\\\ i & 0 \\end{pmatrix}$' },
+  Z: { name:'Z Gate (Pauli-Z)',  desc:'Phase flip. Leaves poles unchanged. Maps $|{+}\\rangle \\leftrightarrow |{-}\\rangle$.',
+       matrix:'$Z = \\begin{pmatrix} 1 & 0 \\\\ 0 & -1 \\end{pmatrix}$' },
+  H: { name:'H Gate (Hadamard)', desc:'Creates/destroys superposition. $H|0\\rangle = |{+}\\rangle$, $H|1\\rangle = |{-}\\rangle$. $H^2 = I$.',
+       matrix:'$H = \\dfrac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$' },
+  S: { name:'S Gate (Phase)',    desc:'90° phase rotation. $S^2 = Z$. Cycles $|{+}\\rangle \\to |{+i}\\rangle \\to |{-}\\rangle \\to |{-i}\\rangle$.',
+       matrix:'$S = \\begin{pmatrix} 1 & 0 \\\\ 0 & i \\end{pmatrix}$' },
+  T: { name:'T Gate',            desc:'45° phase rotation. $T^2 = S$. Finest standard phase gate.',
+       matrix:'$T = \\begin{pmatrix} 1 & 0 \\\\ 0 & e^{i\\pi/4} \\end{pmatrix}$' },
+};
+
+function showGateTooltip(g) {
+  const info = GATE_INFO[g]; if (!info) return;
+  document.getElementById('gt-name').textContent  = info.name;
+  document.getElementById('gt-desc').innerHTML    = info.desc;
+  document.getElementById('gt-matrix').innerHTML  = info.matrix;
+  const panel = document.getElementById('gate-tooltip');
+  panel.classList.add('visible');
+  renderMath(panel);
+}
+function hideGateTooltip() {
+  document.getElementById('gate-tooltip').classList.remove('visible');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   19. SCREEN NAVIGATION
+   ════════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startGame() {
+  // Internal: shared initialization
+  showScreen('screen-game');
+  if (!renderer3) initThree();
+  currentLevelIdx = 0;
+  totalScore      = 0;
+  appliedGates    = [];
+  deconstructBuilt = [];
+  predictMarkerPos = null;
+  predictConfirmed = false;
+  [levelBestScores, levelCompleted].forEach(o => Object.keys(o).forEach(k => delete o[k]));
+}
+
+/** New Recruit: start from T1 with tutorial forced */
+function startNewRecruit() {
+  tutorialCompleted = false;
+  gatesIntroduced = {};  // reset gate introduction tracking
+  startGame();
+  loadLevel(0);
+}
+
+/** Returning Engineer: skip to mission map */
+function startReturning() {
+  tutorialCompleted = true;
+  gatesIntroduced = { X:true, Y:true, Z:true, H:true, S:true };
+  startGame();
+  openMap('title');
+}
+
+/* ── Gate Introduction Cards (New Recruit tutorial only) ─────── */
+const GATE_CARDS = {
+  X: { name:'X Gate', desc:'Flips the qubit between |0⟩ and |1⟩. A 180° rotation around the X axis.' },
+  H: { name:'H Gate', desc:'Creates superposition. Maps |0⟩ to |+⟩ on the equator. Applying it twice returns you to the start.' },
+  Z: { name:'Z Gate', desc:'Flips the phase. Rotates 180° around the vertical axis. Does nothing at the poles.' },
+  S: { name:'S Gate', desc:'Quarter turn. Rotates 90° around the vertical axis. Four S gates make a full circle.' },
+  Y: { name:'Y Gate', desc:'Flips both position and phase simultaneously. 180° rotation around the Y axis.' },
+};
+let gatesIntroduced = {};
+let gateCardCallback = null;
+
+function showGateCard(gateName, onDismiss) {
+  if (!GATE_CARDS[gateName]) { if (onDismiss) onDismiss(); return; }
+  const card = GATE_CARDS[gateName];
+  document.getElementById('gate-card-name').textContent = card.name;
+  document.getElementById('gate-card-desc').textContent = card.desc;
+  document.getElementById('gate-card-overlay').style.display = 'flex';
+  gateCardCallback = onDismiss;
+}
+
+function dismissGateCard() {
+  document.getElementById('gate-card-overlay').style.display = 'none';
+  if (gateCardCallback) { gateCardCallback(); gateCardCallback = null; }
+}
+
+/* ── Post-Gate Transform Label ──────────────────────────────── */
+let transformLabelTimer = null;
+function showTransformLabel(fromLabel, toLabel) {
+  const el = document.getElementById('transform-label');
+  el.textContent = fromLabel + ' → ' + toLabel;
+  el.classList.add('visible');
+  clearTimeout(transformLabelTimer);
+  transformLabelTimer = setTimeout(() => el.classList.remove('visible'), 2000);
+}
+
+/* ── Gate Hover Preview (ghost dot) ─────────────────────────── */
+let ghostDot = null;
+function initGhostDot() {
+  if (ghostDot) return;
+  ghostDot = new THREE.Mesh(
+    new THREE.RingGeometry(0.06, 0.09, 24),
+    new THREE.MeshBasicMaterial({ color: 0x00e5ff, side: THREE.DoubleSide, transparent: true, opacity: 0.4 })
+  );
+  ghostDot.visible = false;
+  sphereGroup3.add(ghostDot);
+}
+function showGatePreview(gateName) {
+  if (!ghostDot) initGhostDot();
+  const transform = GATE_TRANSFORMS[gateName];
+  if (!transform) return;
+  const result = transform(currentState.theta, currentState.phi);
+  ghostDot.position.copy(blochToCartesian(result.theta, result.phi));
+  ghostDot.lookAt(new THREE.Vector3(0,0,0));
+  ghostDot.visible = true;
+}
+function hideGatePreview() {
+  if (ghostDot) ghostDot.visible = false;
+}
+
+function confirmMainMenu() {
+  document.getElementById('overlay-confirm-menu').classList.add('active');
+}
+function goToMainMenu() {
+  closeOverlay('overlay-confirm-menu');
+  showScreen('screen-title');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   20. TOAST
+   ════════════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+</script>
+</body>
+</html>
